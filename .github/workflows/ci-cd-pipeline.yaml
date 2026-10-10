@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - '**'            # any branch push also triggers validation
+      - '**'
   pull_request:
     branches: [ main ]
 
@@ -14,14 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ---------- Checkout ----------
-      # fetch-depth: 2 → gives us HEAD and HEAD^ so we can diff
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
-      # ---------- 1. PDFs must exist ----------
       - name: Check PDFs exist
         run: |
           count=$(find . -name "*.pdf" -type f | wc -l)
@@ -31,7 +28,6 @@ jobs:
             exit 1
           fi
 
-      # ---------- 2. Validate every PDF ----------
       - name: Validate PDF integrity
         run: |
           echo "Checking each PDF..."
@@ -53,13 +49,11 @@ jobs:
             exit 1
           fi
 
-      # ---------- 3. List all PDFs ----------
       - name: List all PDFs
         run: |
           echo "📄 PDFs in this repository:"
           find . -name "*.pdf" -type f -exec ls -lh {} \;
 
-      # ---------- 4. Show what changed (works for push AND PR) ----------
       - name: Show changed files
         run: |
           echo "🔍 Event: ${{ github.event_name }}"
@@ -71,7 +65,7 @@ jobs:
             echo "Base: ${{ github.event.pull_request.base.ref }}"
             echo "Head: ${{ github.event.pull_request.head.ref }}"
             echo "Changed files:"
-            git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD
+            git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD || echo "(unable to compute diff)"
           else
             echo "Commit: ${{ github.event.head_commit.message }}"
             echo "Changed files:"
