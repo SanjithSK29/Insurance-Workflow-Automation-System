@@ -1,0 +1,79 @@
+name: PDF Validation Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - '**'            # any branch push also triggers validation
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-pdfs:
+    name: Validate PDF Files
+    runs-on: ubuntu-latest
+
+    steps:
+      # ---------- Checkout ----------
+      # fetch-depth: 2 → gives us HEAD and HEAD^ so we can diff
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # ---------- 1. PDFs must exist ----------
+      - name: Check PDFs exist
+        run: |
+          count=$(find . -name "*.pdf" -type f | wc -l)
+          echo "Found $count PDF file(s)"
+          if [ "$count" -eq 0 ]; then
+            echo "❌ No PDF files found in the repository!"
+            exit 1
+          fi
+
+      # ---------- 2. Validate every PDF ----------
+      - name: Validate PDF integrity
+        run: |
+          echo "Checking each PDF..."
+          fail=0
+          while IFS= read -r f; do
+            size=$(stat -c%s "$f")
+            if [ "$size" -lt 1000 ]; then
+              echo "❌ $f is too small ($size bytes) — likely corrupted"
+              fail=1
+            elif ! head -c 4 "$f" | grep -q "%PDF"; then
+              echo "❌ $f does not have a valid PDF header"
+              fail=1
+            else
+              echo "✅ $f is valid ($size bytes)"
+            fi
+          done < <(find . -name "*.pdf" -type f)
+          if [ "$fail" -eq 1 ]; then
+            echo "One or more PDFs failed validation."
+            exit 1
+          fi
+
+      # ---------- 3. List all PDFs ----------
+      - name: List all PDFs
+        run: |
+          echo "📄 PDFs in this repository:"
+          find . -name "*.pdf" -type f -exec ls -lh {} \;
+
+      # ---------- 4. Show what changed (works for push AND PR) ----------
+      - name: Show changed files
+        run: |
+          echo "🔍 Event: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Ref:   ${{ github.ref }}"
+          echo "---"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+            echo "Base: ${{ github.event.pull_request.base.ref }}"
+            echo "Head: ${{ github.event.pull_request.head.ref }}"
+            echo "Changed files:"
+            git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD
+          else
+            echo "Commit: ${{ github.event.head_commit.message }}"
+            echo "Changed files:"
+            git diff --name-only HEAD^ HEAD || echo "(no parent commit — first push)"
+          fi
