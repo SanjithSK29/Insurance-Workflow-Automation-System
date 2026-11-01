@@ -119,6 +119,19 @@ All endpoints are under `/api/v1`, return JSON errors as `{ code, message, trace
 
 See [.env.example](.env.example). For any environment that keeps data, set `DATA_KEY`, `JWT_SECRET` and `SIGNING_KEY_PEM`. Otherwise random keys are generated on each start and stored encrypted data becomes unreadable after a restart. Set `TLS_CERT` and `TLS_KEY` to serve HTTPS with TLS 1.2 as the minimum version.
 
+### Authentication and session security
+
+- **Account lockout:** after `LOCKOUT_MAX_ATTEMPTS` failed password or MFA attempts (default 5), the account is locked for `LOCKOUT_MINUTES` (default 15). Login returns `429 ACCOUNT_LOCKED` with `Retry-After`. An admin can unlock it early with `PATCH /api/v1/admin/users/:id` and `{ "unlock": true }`.
+- **MFA replay protection:** each TOTP code is accepted once. A code from an already used time step is refused, even within its 30 s window.
+- **Logout:** `POST /api/v1/auth/logout` (with the bearer token) revokes that token server-side. Other sessions stay valid.
+- **Trace ids:** a client `X-Trace-Id` is reused only if it is 8–64 characters of `A-Z a-z 0-9 . _ -`; otherwise a new UUID is issued.
+
+Existing databases (for example the Docker `/data` volume) get the new columns automatically on start.
+
+### CI security checks
+
+The `security` job in the CI pipeline runs `npm audit` (fails on high or critical production vulnerabilities), a gitleaks secret scan over the full history, and CodeQL. The `docker` job also scans the image with Trivy (report-only). Reviewed gitleaks false positives are listed in `.gitleaksignore`.
+
 ## Repository layout
 
 ```text
