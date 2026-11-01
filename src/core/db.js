@@ -13,8 +13,19 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL CHECK (role IN ('CUSTOMER','AGENT','UNDERWRITER','ADJUSTER','ADMIN')),
   password_hash TEXT NOT NULL,
   mfa_secret TEXT,
+  last_totp_step INTEGER,
+  failed_logins INTEGER NOT NULL DEFAULT 0,
+  locked_until TEXT,
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL
+);
+
+-- Revoked JWT ids (logout). Rows are purged once the token would have expired.
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+  jti TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  revoked_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS customers (
@@ -231,9 +242,26 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON workflow_tasks(status, candidate_
 CREATE INDEX IF NOT EXISTS idx_policies_customer ON policies(customer_id);
 `;
 
+// Columns added after the first release. CREATE TABLE IF NOT EXISTS does not
+// alter tables that already exist, so persistent databases (the Docker
+// volume) are upgraded here.
+const COLUMN_MIGRATIONS = [
+  ['users', 'last_totp_step', 'INTEGER'],
+  ['users', 'failed_logins', 'INTEGER NOT NULL DEFAULT 0'],
+  ['users', 'locked_until', 'TEXT'],
+];
+
+function migrate(raw) {
+  for (const [table, column, type] of COLUMN_MIGRATIONS) {
+    const columns = raw.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+    if (!columns.includes(column)) raw.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+}
+
 function openDatabase(file) {
   const raw = new DatabaseSync(file);
   raw.exec(SCHEMA);
+  migrate(raw);
 
   const cache = new Map();
   const prepare = (sql) => {

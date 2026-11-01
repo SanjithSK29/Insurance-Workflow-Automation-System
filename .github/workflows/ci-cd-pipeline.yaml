@@ -8,6 +8,10 @@ on:
   pull_request:
     branches: [ main ]
 
+# Least privilege for the workflow token; jobs that need more ask for it.
+permissions:
+  contents: read
+
 jobs:
   validate-pdfs:
     name: Validate PDF Files
@@ -100,6 +104,42 @@ jobs:
           done
           echo "❌ server did not become healthy"; cat server.log; exit 1
 
+  security:
+    name: Security scans (dependencies, secrets, CodeQL)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dependency audit (fail on high/critical in production deps)
+        run: |
+          npm ci
+          npm audit --omit=dev --audit-level=high
+
+      - name: Secret scan (gitleaks, full history)
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.21.2 \
+            detect --source /repo --redact --no-banner -v
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+
   docker:
     name: Build Docker image
     runs-on: ubuntu-latest
@@ -110,6 +150,13 @@ jobs:
 
       - name: Build image
         run: docker build -t iwas:${{ github.sha }} .
+
+      # Report-only for now so base-image CVEs do not block teammates' PRs;
+      # switch --exit-code to 1 once the base image is pinned.
+      - name: Scan image for vulnerabilities (Trivy)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.57.1 \
+            image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 iwas:${{ github.sha }}
 
       - name: Run container and check health
         run: |

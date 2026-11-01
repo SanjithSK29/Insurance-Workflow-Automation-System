@@ -26,6 +26,11 @@ function loadConfig(overrides = {}) {
       max: Number(env.RATE_LIMIT_MAX || 300),
       publicMax: Number(env.RATE_LIMIT_PUBLIC_MAX || 60),
     },
+    // Account lockout after repeated failed logins (IWA-SR-002/004).
+    lockout: {
+      maxAttempts: Number(env.LOCKOUT_MAX_ATTEMPTS || 5),
+      minutes: Number(env.LOCKOUT_MINUTES || 15),
+    },
     seedDemoData: env.SEED_DEMO !== 'false',
     logLevel: env.LOG_LEVEL || 'info',
     ...overrides,

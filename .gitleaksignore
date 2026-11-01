@@ -1,0 +1,5 @@
+# Reviewed false positives (gitleaks). Add a line only after checking the finding.
+# .env.example: empty TLS_KEY placeholder
+# src/seed.js: public demo-account MFA secrets, documented in the README
+ec641520047d8c8153c2bef41eac3c7752f92c9b:.env.example:generic-api-key:12
+ec641520047d8c8153c2bef41eac3c7752f92c9b:src/seed.js:generic-api-key:9
