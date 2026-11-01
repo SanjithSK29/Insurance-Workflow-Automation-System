@@ -6,8 +6,13 @@ const { unauthorized, forbidden, ApiError } = require('../core/errors');
 
 const ROLES = ['CUSTOMER', 'AGENT', 'UNDERWRITER', 'ADJUSTER', 'ADMIN'];
 
+// A client-supplied trace id is echoed in headers and written to logs, so
+// only accept a short token of safe characters (prevents log injection).
+const TRACE_ID_RE = /^[A-Za-z0-9._-]{8,64}$/;
+
 function traceAndHeaders(req, res, next) {
-  req.traceId = req.get('x-trace-id') || crypto.randomUUID();
+  const incoming = req.get('x-trace-id');
+  req.traceId = incoming && TRACE_ID_RE.test(incoming) ? incoming : crypto.randomUUID();
   res.set({
     'X-Trace-Id': req.traceId,
     'X-Content-Type-Options': 'nosniff',
@@ -15,6 +20,8 @@ function traceAndHeaders(req, res, next) {
     'Referrer-Policy': 'no-referrer',
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     'Content-Security-Policy': "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'",
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   });
   next();
 }

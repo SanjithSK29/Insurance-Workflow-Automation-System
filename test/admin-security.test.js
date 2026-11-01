@@ -286,4 +286,17 @@ describe('Authentication hardening', () => {
     assert.equal((await t.call('POST', '/auth/logout')).status, 401, 'logout requires a token');
     assert.ok(t.ctx.db.get("SELECT 1 FROM audit_log WHERE action = 'LOGOUT'"));
   });
+
+  test('TC-Sec-Trace-01: only well-formed client trace ids are echoed', async () => {
+    const good = await t.call('GET', '/health', { headers: { 'x-trace-id': 'trace-ok-1234' } });
+    assert.equal(good.headers.get('x-trace-id'), 'trace-ok-1234');
+    for (const bad of ['short', 'has spaces in it', '<script>alert(1)</script>', 'x'.repeat(65)]) {
+      const res = await t.call('GET', '/health', { headers: { 'x-trace-id': bad } });
+      assert.notEqual(res.headers.get('x-trace-id'), bad);
+      assert.match(res.headers.get('x-trace-id'), /^[0-9a-f-]{36}$/);
+    }
+    const res = await t.call('GET', '/health');
+    assert.equal(res.headers.get('cross-origin-opener-policy'), 'same-origin');
+    assert.match(res.headers.get('permissions-policy'), /camera=\(\)/);
+  });
 });
