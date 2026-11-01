@@ -26,9 +26,13 @@ function authenticate(ctx) {
     if (!token) return next(unauthorized());
     const payload = verifyJwt(token, ctx.config.jwtSecret);
     if (!payload) return next(unauthorized('Invalid or expired token'));
+    if (payload.jti && ctx.db.get('SELECT 1 FROM revoked_tokens WHERE jti = ?', payload.jti)) {
+      return next(unauthorized('Token has been revoked'));
+    }
     const user = ctx.db.get('SELECT id, email, name, role, active FROM users WHERE id = ?', payload.sub);
     if (!user || !user.active) return next(unauthorized('Account disabled'));
     req.user = user;
+    req.auth = payload;
     next();
   };
 }

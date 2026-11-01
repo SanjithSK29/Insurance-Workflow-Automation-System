@@ -23,7 +23,8 @@ const b64url = (buf) => Buffer.from(buf).toString('base64url');
 function signJwt(payload, secret, ttlSeconds) {
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const body = b64url(JSON.stringify({ ...payload, iat: now, exp: now + ttlSeconds }));
+  // jti gives every token an id so it can be revoked (logout).
+  const body = b64url(JSON.stringify({ jti: crypto.randomUUID(), ...payload, iat: now, exp: now + ttlSeconds }));
   const sig = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
   return `${header}.${body}.${sig}`;
 }

@@ -269,4 +269,21 @@ describe('Authentication hardening', () => {
     db.close();
     for (const c of ['last_totp_step', 'failed_logins', 'locked_until']) assert.ok(cols.includes(c), c);
   });
+
+  test('TC-Sec-Revoke-01: logout revokes the token immediately; other sessions keep working', async () => {
+    const email = 'logout@test.local';
+    await t.call('POST', '/auth/register', { body: { email, name: 'Logout User', password: PASSWORD } });
+    const tokenA = await t.login(email);
+    const tokenB = await t.login(email);
+    assert.notEqual(tokenA, tokenB, 'each login gets its own token id');
+    assert.equal((await t.call('GET', '/me', { token: tokenA })).status, 200);
+
+    assert.equal((await t.call('POST', '/auth/logout', { token: tokenA })).status, 204);
+    const after = await t.call('GET', '/me', { token: tokenA });
+    assert.equal(after.status, 401);
+    assert.match(after.body.message, /revoked/);
+    assert.equal((await t.call('GET', '/me', { token: tokenB })).status, 200, 'only the logged-out session is revoked');
+    assert.equal((await t.call('POST', '/auth/logout')).status, 401, 'logout requires a token');
+    assert.ok(t.ctx.db.get("SELECT 1 FROM audit_log WHERE action = 'LOGOUT'"));
+  });
 });

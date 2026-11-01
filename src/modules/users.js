@@ -3,7 +3,7 @@
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
 const { hashPassword, verifyPassword, signJwt, generateTotpSecret, matchTotpStep } = require('../security/auth');
-const { requireRole, ROLES } = require('../security/middleware');
+const { authenticate, requireRole, ROLES } = require('../security/middleware');
 const { badRequest, unauthorized, conflict, notFound, ApiError } = require('../core/errors');
 
 const MFA_ROLES = new Set(['ADMIN', 'UNDERWRITER']);
@@ -98,6 +98,19 @@ module.exports = function usersModule(ctx) {
     audit.record(user.id, 'LOGIN', 'user', user.id, { mfa: MFA_ROLES.has(user.role) });
     const token = signJwt({ sub: user.id, role: user.role }, config.jwtSecret, config.jwtTtlSeconds);
     res.json({ token, expiresIn: config.jwtTtlSeconds, user: publicUser(user) });
+  });
+
+  // Logout revokes the presented token server-side, so a stolen or shared
+  // token stops working immediately instead of at expiry.
+  router.post('/logout', authenticate(ctx), (req, res) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (req.auth.jti) {
+      db.run('INSERT OR IGNORE INTO revoked_tokens (jti, user_id, expires_at, revoked_at) VALUES (?,?,?,?)',
+        req.auth.jti, req.user.id, req.auth.exp ?? nowSec, nowIso());
+    }
+    db.run('DELETE FROM revoked_tokens WHERE expires_at < ?', nowSec);
+    audit.record(req.user.id, 'LOGOUT', 'user', req.user.id, {});
+    res.status(204).end();
   });
 
   const meRouter = express.Router();
