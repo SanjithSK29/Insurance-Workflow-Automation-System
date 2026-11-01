@@ -1,9 +1,10 @@
 // Identity: registration, login with MFA for privileged roles (IWA-SR-002),
 // and admin user management.
 const express = require('express');
+const { rateLimit } = require('express-rate-limit');
 const { newId, nowIso } = require('../core/db');
 const { hashPassword, verifyPassword, signJwt, generateTotpSecret, matchTotpStep } = require('../security/auth');
-const { authenticate, requireRole, rateLimit, ROLES } = require('../security/middleware');
+const { authenticate, requireRole, ROLES } = require('../security/middleware');
 const { badRequest, unauthorized, conflict, notFound, ApiError } = require('../core/errors');
 
 const MFA_ROLES = new Set(['ADMIN', 'UNDERWRITER']);
@@ -103,7 +104,13 @@ module.exports = function usersModule(ctx) {
   // Logout revokes the presented token server-side, so a stolen or shared
   // token stops working immediately instead of at expiry. It has its own
   // limiter because every call does a token lookup and a DB write.
-  const logoutLimit = rateLimit({ windowMs: config.rateLimit.windowMs, max: config.rateLimit.publicMax, name: 'logout' });
+  const logoutLimit = rateLimit({
+    windowMs: config.rateLimit.windowMs,
+    limit: config.rateLimit.publicMax,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    handler: (req, res, next) => next(new ApiError(429, 'RATE_LIMITED', 'Too many requests, slow down')),
+  });
   router.post('/logout', logoutLimit, authenticate(ctx), (req, res) => {
     const nowSec = Math.floor(Date.now() / 1000);
     if (req.auth.jti) {
