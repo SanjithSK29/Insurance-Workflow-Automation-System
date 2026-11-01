@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Default multi-level claim approval workflow (IWA-F-021).
+  Variables provided by the Claims service when the instance starts:
+    amount (number), fraudFlagged (boolean), claimType (string)
+  Each userTask completion sets: outcome ('approve' | 'reject')
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:iwas="http://iwas.example/schema/bpmn"
+                  id="Definitions_ClaimApproval" targetNamespace="http://iwas.example/bpmn">
+  <bpmn:process id="claim-approval" name="Claim Approval" isExecutable="true">
+    <bpmn:startEvent id="start" name="Claim registered" />
+    <bpmn:sequenceFlow id="f_start" sourceRef="start" targetRef="gw_fraud" />
+
+    <bpmn:exclusiveGateway id="gw_fraud" name="Fraud flag raised?" default="f_no_fraud" />
+    <bpmn:sequenceFlow id="f_fraud" sourceRef="gw_fraud" targetRef="task_fraud">
+      <bpmn:conditionExpression>${fraudFlagged == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_no_fraud" sourceRef="gw_fraud" targetRef="task_review" />
+
+    <bpmn:userTask id="task_fraud" name="Fraud investigation" camunda:candidateGroups="ADJUSTER" />
+    <bpmn:sequenceFlow id="f_fraud_done" sourceRef="task_fraud" targetRef="gw_fraud_outcome" />
+    <bpmn:exclusiveGateway id="gw_fraud_outcome" name="Cleared?" default="f_fraud_reject" />
+    <bpmn:sequenceFlow id="f_fraud_cleared" sourceRef="gw_fraud_outcome" targetRef="task_review">
+      <bpmn:conditionExpression>${outcome == 'approve'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_fraud_reject" sourceRef="gw_fraud_outcome" targetRef="end_rejected" />
+
+    <bpmn:userTask id="task_review" name="Adjuster review" camunda:candidateGroups="ADJUSTER" />
+    <bpmn:sequenceFlow id="f_review_done" sourceRef="task_review" targetRef="gw_review" />
+    <bpmn:exclusiveGateway id="gw_review" name="Approved by adjuster?" default="f_review_reject" />
+    <bpmn:sequenceFlow id="f_review_ok" sourceRef="gw_review" targetRef="gw_amount">
+      <bpmn:conditionExpression>${outcome == 'approve'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_review_reject" sourceRef="gw_review" targetRef="end_rejected" />
+
+    <bpmn:exclusiveGateway id="gw_amount" name="High value claim?" default="f_low_value" />
+    <bpmn:sequenceFlow id="f_high_value" sourceRef="gw_amount" targetRef="task_senior">
+      <bpmn:conditionExpression>${amount &gt; 100000}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_low_value" sourceRef="gw_amount" targetRef="end_approved" />
+
+    <bpmn:userTask id="task_senior" name="Senior claims approval" camunda:candidateGroups="ADMIN" />
+    <bpmn:sequenceFlow id="f_senior_done" sourceRef="task_senior" targetRef="gw_senior" />
+    <bpmn:exclusiveGateway id="gw_senior" name="Approved by senior?" default="f_senior_reject" />
+    <bpmn:sequenceFlow id="f_senior_ok" sourceRef="gw_senior" targetRef="end_approved">
+      <bpmn:conditionExpression>${outcome == 'approve'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_senior_reject" sourceRef="gw_senior" targetRef="end_rejected" />
+
+    <bpmn:endEvent id="end_approved" name="Claim approved" iwas:result="APPROVED" />
+    <bpmn:endEvent id="end_rejected" name="Claim rejected" iwas:result="REJECTED" />
+  </bpmn:process>
+</bpmn:definitions>

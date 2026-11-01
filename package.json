@@ -1,0 +1,19 @@
+{
+  "name": "iwas",
+  "version": "1.0.0",
+  "description": "Insurance Workflow Automation System (IWAS) - quotes, underwriting, policies, claims and BPMN workflows",
+  "main": "src/server.js",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 \"test/*.test.js\"",
+    "otp": "node scripts/otp.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
