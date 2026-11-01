@@ -3,7 +3,7 @@
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
 const { hashPassword, verifyPassword, signJwt, generateTotpSecret, matchTotpStep } = require('../security/auth');
-const { authenticate, requireRole, ROLES } = require('../security/middleware');
+const { authenticate, requireRole, rateLimit, ROLES } = require('../security/middleware');
 const { badRequest, unauthorized, conflict, notFound, ApiError } = require('../core/errors');
 
 const MFA_ROLES = new Set(['ADMIN', 'UNDERWRITER']);
@@ -101,8 +101,10 @@ module.exports = function usersModule(ctx) {
   });
 
   // Logout revokes the presented token server-side, so a stolen or shared
-  // token stops working immediately instead of at expiry.
-  router.post('/logout', authenticate(ctx), (req, res) => {
+  // token stops working immediately instead of at expiry. It has its own
+  // limiter because every call does a token lookup and a DB write.
+  const logoutLimit = rateLimit({ windowMs: config.rateLimit.windowMs, max: config.rateLimit.publicMax, name: 'logout' });
+  router.post('/logout', logoutLimit, authenticate(ctx), (req, res) => {
     const nowSec = Math.floor(Date.now() / 1000);
     if (req.auth.jti) {
       db.run('INSERT OR IGNORE INTO revoked_tokens (jti, user_id, expires_at, revoked_at) VALUES (?,?,?,?)',
