@@ -133,7 +133,9 @@ describe('Security requirements', () => {
       assert.equal(noOtp.body.code, 'MFA_REQUIRED');
       const wrong = await t.call('POST', '/auth/login', { body: { email: u.email, password: PASSWORD, otp: '000000' } });
       assert.equal(wrong.body.code, 'MFA_INVALID');
-      const ok = await t.call('POST', '/auth/login', { body: { email: u.email, password: PASSWORD, otp: totp(u.mfaSecret) } });
+      // The harness already used the current step for this user; replay protection
+      // refuses it, so log in with the next step's code (inside the drift window).
+      const ok = await t.call('POST', '/auth/login', { body: { email: u.email, password: PASSWORD, otp: totp(u.mfaSecret, Date.now() + 30_000) } });
       assert.equal(ok.status, 200);
     }
     const customer = await t.call('POST', '/auth/login', { body: { email: t.users.CUSTOMER.email, password: PASSWORD } });
@@ -203,5 +205,68 @@ describe('Security requirements', () => {
     const res = await t.call('GET', '/health');
     assert.match(res.headers.get('strict-transport-security'), /max-age=31536000/);
     assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+  });
+});
+
+describe('Authentication hardening', () => {
+  let t;
+  before(async () => { t = await startApp(); });
+  after(() => t.close());
+
+  test('TC-Sec-MFA-02: a TOTP code cannot be replayed', async () => {
+    const u = t.ctx.services.users.createUser({ email: 'replay@test.local', name: 'Replay Admin', role: 'ADMIN', password: PASSWORD });
+    const code = totp(u.mfaSecret);
+    const first = await t.call('POST', '/auth/login', { body: { email: u.email, password: PASSWORD, otp: code } });
+    assert.equal(first.status, 200);
+    const replay = await t.call('POST', '/auth/login', { body: { email: u.email, password: PASSWORD, otp: code } });
+    assert.equal(replay.status, 401);
+    assert.equal(replay.body.code, 'MFA_INVALID');
+    const audited = t.ctx.db.get("SELECT details FROM audit_log WHERE action = 'MFA_FAILED' AND actor = ? ORDER BY seq DESC", u.id);
+    assert.equal(JSON.parse(audited.details).replay, true, 'replay attempts are audited as such');
+  });
+
+  test('TC-Sec-Lock-01: account locks after repeated failures and an admin can unlock it', async () => {
+    const email = 'lockme@test.local';
+    await t.call('POST', '/auth/register', { body: { email, name: 'Lock Me', password: PASSWORD } });
+    for (let i = 0; i < 5; i++) {
+      const res = await t.call('POST', '/auth/login', { body: { email, password: 'wrong-password' } });
+      assert.equal(res.status, 401);
+    }
+    const locked = await t.call('POST', '/auth/login', { body: { email, password: PASSWORD } });
+    assert.equal(locked.status, 429, 'correct password is refused while locked');
+    assert.equal(locked.body.code, 'ACCOUNT_LOCKED');
+    assert.ok(Number(locked.headers.get('retry-after')) > 0);
+
+    const user = t.ctx.db.get('SELECT id FROM users WHERE email = ?', email);
+    const list = await t.call('GET', '/admin/users', { token: t.tokens.ADMIN });
+    assert.equal(list.body.find((x) => x.id === user.id).locked, true);
+    const unlock = await t.call('PATCH', `/admin/users/${user.id}`, { token: t.tokens.ADMIN, body: { unlock: true } });
+    assert.equal(unlock.body.locked, false);
+    assert.equal((await t.call('POST', '/auth/login', { body: { email, password: PASSWORD } })).status, 200);
+  });
+
+  test('TC-Sec-Lock-02: a successful login resets the failure counter', async () => {
+    const email = 'reset@test.local';
+    await t.call('POST', '/auth/register', { body: { email, name: 'Reset Me', password: PASSWORD } });
+    for (let i = 0; i < 4; i++) await t.call('POST', '/auth/login', { body: { email, password: 'nope-nope' } });
+    assert.equal((await t.call('POST', '/auth/login', { body: { email, password: PASSWORD } })).status, 200);
+    for (let i = 0; i < 4; i++) await t.call('POST', '/auth/login', { body: { email, password: 'nope-nope' } });
+    assert.equal((await t.call('POST', '/auth/login', { body: { email, password: PASSWORD } })).status, 200, 'not locked: counter was reset');
+  });
+
+  test('TC-Sec-Mig-01: databases created before the hardening columns are migrated on open', () => {
+    const { DatabaseSync } = require('node:sqlite');
+    const { openDatabase } = require('../src/core/db');
+    const fs = require('node:fs');
+    const os = require('node:os');
+    const path = require('node:path');
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'iwas-')), 'old.db');
+    const old = new DatabaseSync(file);
+    old.exec("CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL, role TEXT NOT NULL, password_hash TEXT NOT NULL, mfa_secret TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL)");
+    old.close();
+    const db = openDatabase(file);
+    const cols = db.all('PRAGMA table_info(users)').map((c) => c.name);
+    db.close();
+    for (const c of ['last_totp_step', 'failed_logins', 'locked_until']) assert.ok(cols.includes(c), c);
   });
 });

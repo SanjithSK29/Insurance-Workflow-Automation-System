@@ -71,19 +71,41 @@ function base32Decode(str) {
 
 const generateTotpSecret = () => base32Encode(crypto.randomBytes(20));
 
-function totp(secret, timeMs = Date.now(), step = 30) {
+const TOTP_STEP_SECONDS = 30;
+const totpCounter = (timeMs, step = TOTP_STEP_SECONDS) => Math.floor(timeMs / 1000 / step);
+
+// HOTP (RFC 4226) for a given counter value.
+function hotp(secret, counterValue) {
   const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(timeMs / 1000 / step)));
+  counter.writeBigUInt64BE(BigInt(counterValue));
   const hmac = crypto.createHmac('sha1', base32Decode(secret)).update(counter).digest();
   const offset = hmac[hmac.length - 1] & 0x0f;
   const code = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
   return String(code).padStart(6, '0');
 }
 
-// Accept the previous/next window to tolerate clock drift.
-function verifyTotp(secret, code, timeMs = Date.now()) {
-  if (!/^\d{6}$/.test(String(code || ''))) return false;
-  return [-1, 0, 1].some((w) => totp(secret, timeMs + w * 30_000) === String(code));
+function totp(secret, timeMs = Date.now(), step = TOTP_STEP_SECONDS) {
+  return hotp(secret, totpCounter(timeMs, step));
 }
 
-module.exports = { hashPassword, verifyPassword, signJwt, verifyJwt, generateTotpSecret, totp, verifyTotp };
+// Returns the time step the code belongs to, or null if it does not match.
+// Accepts the previous/next window to tolerate clock drift. Every candidate
+// is compared in constant time, and steps <= `notAfter` (the last step this
+// user already used) are refused so a code cannot be replayed (RFC 6238 §5.2).
+function matchTotpStep(secret, code, timeMs = Date.now(), { window = 1, notAfter = null } = {}) {
+  const given = String(code ?? '');
+  if (!/^\d{6}$/.test(given)) return null;
+  const givenBuf = Buffer.from(given);
+  const now = totpCounter(timeMs);
+  let matched = null;
+  for (let w = -window; w <= window; w++) {
+    const step = now + w;
+    const ok = crypto.timingSafeEqual(Buffer.from(hotp(secret, step)), givenBuf);
+    if (ok && matched === null && (notAfter === null || step > notAfter)) matched = step;
+  }
+  return matched;
+}
+
+const verifyTotp = (secret, code, timeMs = Date.now()) => matchTotpStep(secret, code, timeMs) !== null;
+
+module.exports = { hashPassword, verifyPassword, signJwt, verifyJwt, generateTotpSecret, totp, verifyTotp, matchTotpStep };
