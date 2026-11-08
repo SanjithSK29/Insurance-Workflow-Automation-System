@@ -1,7 +1,7 @@
 // Operations: dashboards (IWA-F-032), CSV/PDF reports (IWA-F-033), audit log
 // access (IWA-F-034), runtime settings and scheduled jobs.
 const express = require('express');
-const { today, round2, isIsoDate, parseJson } = require('../core/util');
+const { today, round2, isIsoDate, parseJson, daysBetween } = require('../core/util');
 const { requireRole } = require('../security/middleware');
 const { buildPdf } = require('./pdf');
 const { badRequest, notFound } = require('../core/errors');
@@ -24,6 +24,14 @@ const REPORTS = {
     title: 'Premium Collections',
     columns: ['id', 'purpose', 'reference_id', 'amount', 'base_amount', 'tax_amount', 'status', 'created_at'],
     query: (db) => db.all('SELECT * FROM payments ORDER BY created_at'),
+  },
+  renewals: {
+    title: 'Renewals Due',
+    columns: ['policy_number', 'customer', 'coverage_type', 'premium', 'end_date', 'days_to_expiry'],
+    query: (db) => db.all(`SELECT p.policy_number, c.name AS customer, p.coverage_type, p.premium, p.end_date
+                           FROM policies p JOIN customers c ON c.id = p.customer_id
+                           WHERE p.status = 'ACTIVE' ORDER BY p.end_date`)
+      .map((r) => ({ ...r, days_to_expiry: daysBetween(today(), r.end_date) })),
   },
 };
 
@@ -70,6 +78,10 @@ module.exports = function adminModule(ctx) {
       finance: {
         premiumCollected: round2(db.get("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE status = 'CAPTURED'").s),
         failedPayments: count("SELECT COUNT(*) AS n FROM payments WHERE status = 'FAILED'"),
+      },
+      renewals: {
+        overdue: count("SELECT COUNT(*) AS n FROM policies WHERE status = 'ACTIVE' AND end_date < date('now')"),
+        renewalWindowOpen: count("SELECT COUNT(*) AS n FROM policies WHERE status = 'ACTIVE' AND end_date >= date('now') AND end_date <= date('now', '+60 day')"),
       },
     };
   }
