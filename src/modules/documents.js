@@ -7,7 +7,7 @@ const { sha256 } = require('../security/crypto');
 const { buildPdf } = require('./pdf');
 const { notFound, forbidden } = require('../core/errors');
 
-const SIGNED_KINDS = new Set(['POLICY', 'INVOICE', 'SETTLEMENT', 'RENEWAL']);
+const SIGNED_KINDS = new Set(['POLICY', 'INVOICE', 'SETTLEMENT', 'RENEWAL', 'CANCELLATION']);
 
 module.exports = function documentsModule(ctx) {
   const { db, crypto } = ctx;
