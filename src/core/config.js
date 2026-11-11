@@ -20,6 +20,9 @@ function loadConfig(overrides = {}) {
     gstRate: 0.18,
     maxUploadBytes: 10 * 1024 * 1024,
     reminderDays: [30, 15, 7],
+    // Policy cancellation: short-rate retention deducted from the pro-rata
+    // refund of the unexpired portion of the premium.
+    cancellationFeePercent: Number(env.CANCELLATION_FEE_PERCENT || 5),
     slaHours: 48,
     rateLimit: {
       windowMs: Number(env.RATE_LIMIT_WINDOW_MS || 60_000),

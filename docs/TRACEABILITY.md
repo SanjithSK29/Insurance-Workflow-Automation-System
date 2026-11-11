@@ -2,7 +2,7 @@
 
 This matrix updates SRS §8 and STP §13 with the implementation and test results.
 Status: **P** = passed, **A** = automated check in CI, **M** = manual / environment-dependent verification.
-Last run: `npm test` on Node.js 22: **40 tests, 40 passed, 0 failed**.
+Last run: `npm test` on Node.js 22: **51 tests, 51 passed, 0 failed**.
 
 ## Functional requirements
 
@@ -15,6 +15,7 @@ Last run: `npm test` on Node.js 22: **40 tests, 40 passed, 0 failed**.
 | IWA-F-011 | Renewal with reminders at 30/15/7 days | `policies.js` (`runRenewalReminders`), `server.js` scheduler | TC-Renew-01, renewal payment | policy.test.js | P |
 | IWA-F-012 | Endorsement with audit trail | `policies.js` (`endorse`) | TC-Endorse-01 | policy.test.js | P |
 | IWA-F-013 | Invoice PDF with tax breakup | `payments.js` (`generateInvoice`) | TC-Invoice-01 | policy.test.js | P |
+| IWA-F-014 | Policy cancellation with pro-rata refund | `policies.js` (`cancel`), `payments.js` (`refund`), `documents.js` (cancellation letter) | TC-Cancel-01, TC-Cancel-02 | policy-cancellation.test.js | P |
 | IWA-F-020 | Claim registration with document upload (10 MB) | `src/modules/claims.js` | TC-Claim-01, TC-Claim-02 | claims-workflow.test.js | P |
 | IWA-F-021 | Configurable multi-level BPMN approval | `src/workflow/*`, `claim-approval.bpmn` | TC-WF-01, TC-WF-02 | claims-workflow.test.js | P |
 | IWA-F-022 | Automated fraud detection | `src/modules/fraud.js` | TC-Fraud-01 | claims-workflow.test.js | P |
@@ -56,7 +57,7 @@ Last run: `npm test` on Node.js 22: **40 tests, 40 passed, 0 failed**.
 
 | Criterion (STP §5) | Result |
 | --- | --- |
-| 100 % of planned automated test cases executed | 40 / 40 executed |
+| 100 % of planned automated test cases executed | 51 / 51 executed |
 | 0 critical defects open | 0 open |
 | All high-priority acceptance criteria met | All high-priority F- and SR- requirements are P |
 | Items that need a deployed environment | NF-002 uptime, NF-005 accessibility audit, k6 load test, OWASP ZAP scan: planned for UAT |

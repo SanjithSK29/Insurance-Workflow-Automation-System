@@ -33,6 +33,12 @@ const REPORTS = {
                            WHERE p.status = 'ACTIVE' ORDER BY p.end_date`)
       .map((r) => ({ ...r, days_to_expiry: daysBetween(today(), r.end_date) })),
   },
+  cancellations: {
+    title: 'Cancellations Register',
+    columns: ['policy_number', 'customer', 'coverage_type', 'reason', 'gross_refund', 'fee', 'refund_amount', 'cancelled_at'],
+    query: (db) => db.all(`SELECT p.policy_number, c.name AS customer, p.coverage_type, x.reason, x.gross_refund, x.fee, x.refund_amount, x.created_at AS cancelled_at
+                           FROM cancellations x JOIN policies p ON p.id = x.policy_id JOIN customers c ON c.id = p.customer_id ORDER BY x.created_at DESC`),
+  },
 };
 
 const csvCell = (v) => {
@@ -55,6 +61,7 @@ module.exports = function adminModule(ctx) {
         byStatus: group('SELECT status AS k, COUNT(*) AS n FROM policies GROUP BY status'),
         byCoverage: group("SELECT coverage_type AS k, COUNT(*) AS n FROM policies WHERE status = 'ACTIVE' GROUP BY coverage_type"),
         active: count("SELECT COUNT(*) AS n FROM policies WHERE status = 'ACTIVE'"),
+        cancelled: count("SELECT COUNT(*) AS n FROM policies WHERE status = 'CANCELLED'"),
         expiringIn30Days: count("SELECT COUNT(*) AS n FROM policies WHERE status = 'ACTIVE' AND end_date <= date('now', '+30 day')"),
       },
       applications: {
@@ -77,6 +84,7 @@ module.exports = function adminModule(ctx) {
       },
       finance: {
         premiumCollected: round2(db.get("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE status = 'CAPTURED'").s),
+        refunded: round2(db.get("SELECT COALESCE(SUM(amount),0) AS s FROM refunds WHERE status = 'PAID'").s),
         failedPayments: count("SELECT COUNT(*) AS n FROM payments WHERE status = 'FAILED'"),
       },
       renewals: {

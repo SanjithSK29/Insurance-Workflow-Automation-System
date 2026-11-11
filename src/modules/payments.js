@@ -110,6 +110,24 @@ module.exports = function paymentsModule(ctx) {
     return result;
   }
 
+  // Refund a pro-rata portion of a premium (policy cancellation). Zero-amount
+  // refunds are recorded without a gateway call.
+  async function refund({ policyId, paymentId = null, amount, reason, actorId }) {
+    if (!Number.isFinite(amount) || amount < 0) throw badRequest('Invalid refund amount');
+    const refundId = newId('RF');
+    let gatewayRef = null;
+    if (amount > 0) {
+      const result = await retry(() => gateway.payout({ amount, reference: refundId }), { attempts: 3, baseMs: 20 });
+      gatewayRef = result.reference;
+    }
+    db.run(
+      'INSERT INTO refunds (id, policy_id, payment_id, amount, reason, status, gateway_ref, created_at) VALUES (?,?,?,?,?,?,?,?)',
+      refundId, policyId, paymentId, amount, reason, 'PAID', gatewayRef, nowIso(),
+    );
+    audit.record(actorId, 'REFUND_ISSUED', 'refund', refundId, { policyId, amount, reason });
+    return { refundId, amount, status: 'PAID', gatewayRef };
+  }
+
   const present = (r) => ({
     paymentId: r.id, purpose: r.purpose, referenceId: r.reference_id, policyId: r.policy_id, amount: r.amount,
     baseAmount: r.base_amount, taxAmount: r.tax_amount, status: r.status, attempts: r.attempts,
@@ -150,5 +168,5 @@ module.exports = function paymentsModule(ctx) {
     res.json(rows.map(present));
   });
 
-  return { charge, payout, generateInvoice, gateway, router };
+  return { charge, payout, refund, generateInvoice, gateway, router };
 };

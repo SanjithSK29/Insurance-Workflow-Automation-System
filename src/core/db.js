@@ -215,6 +215,30 @@ CREATE TABLE IF NOT EXISTS reminders_sent (
   PRIMARY KEY (policy_id, end_date, days_before)
 );
 
+CREATE TABLE IF NOT EXISTS cancellations (
+  id TEXT PRIMARY KEY,
+  policy_id TEXT NOT NULL REFERENCES policies(id),
+  reason TEXT,
+  gross_refund REAL NOT NULL DEFAULT 0,
+  fee REAL NOT NULL DEFAULT 0,
+  refund_amount REAL NOT NULL DEFAULT 0,
+  remaining_days INTEGER NOT NULL,
+  cancelled_by TEXT NOT NULL,
+  document_id TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS refunds (
+  id TEXT PRIMARY KEY,
+  policy_id TEXT NOT NULL REFERENCES policies(id),
+  payment_id TEXT,
+  amount REAL NOT NULL,
+  reason TEXT,
+  status TEXT NOT NULL,
+  gateway_ref TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

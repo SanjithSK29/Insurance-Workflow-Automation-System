@@ -2,7 +2,7 @@
 
 A working implementation of the insurance platform specified in this repository's SRS, SAD and STP. It covers customer onboarding, quotes, underwriting, policies and claims settlement, with BPMN-driven approval workflows, role-based dashboards and an immutable audit trail.
 
-> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **40 tests, 40 passing** (`npm test`). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
+> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **51 tests, 51 passing** (`npm test`). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
 
 ## Quick start
 
@@ -53,7 +53,7 @@ docker build -t iwas . && docker run -p 3000:3000 -v iwas-data:/data iwas
 | Quotes | Personalised premium from age, income, coverage (health / life / motor / home), term, sum insured and tobacco use, with a full breakdown (loadings, multi-year discount, 18% GST) | F-001 |
 | Underwriting | Rule engine scoring 0–100 (age, tobacco, conditions, hazardous occupation, cover-to-income, prior claims); scores at or above a configurable threshold go to manual review | F-002 |
 | KYC | Aadhaar/PAN verification before issuance, with a circuit breaker and retries; when the provider is down, cases go to a manual KYC queue for underwriters | F-003 |
-| Policies | Issued only after approval, verified KYC and captured payment. Ed25519-signed PDF schedule, renewals with 30/15/7-day reminders, endorsements with pro-rata premium adjustment and audit trail, GST invoices with CGST/SGST breakup | F-010 – F-013 |
+| Policies | Issued only after approval, verified KYC and captured payment. Ed25519-signed PDF schedule, renewals with 30/15/7-day reminders, endorsements with pro-rata premium adjustment and audit trail, cancellation with pro-rata refund and a signed cancellation letter, GST invoices with CGST/SGST breakup | F-010 – F-014 |
 | Claims | Registration with PDF/JPG/PNG upload (10 MB limit, content sniffing), rule-based fraud detection (duplicates, early claims, frequency, cover ratio, late reporting), settlement formula (deductible, co-pay, remaining cover), signed settlement letter, notifications at every status | F-020 – F-024 |
 | Workflow | BPMN 2.0 engine (start/end events, user tasks with candidate groups, service tasks, exclusive gateways with conditions). The default claim flow is: fraud investigation if flagged → adjuster review → senior approval above ₹1,00,000. Admins edit, validate and deploy new versions from the UI | F-021, F-030 |
 | Admin | RBAC on every endpoint, user management, dashboards (SLA breaches, backlog, policy counts, premium collected, renewal pipeline), CSV/PDF reports including a renewals-due register, hash-chained append-only audit log with a verify button | F-031 – F-034 |
@@ -106,7 +106,7 @@ All endpoints are under `/api/v1`, return JSON errors as `{ code, message, trace
 | `POST /customers/:id/kyc/manual` | underwriter | Resolve manual KYC queue |
 | `POST /applications`, `POST /applications/:id/decision` | customer/agent; underwriter | Apply; manual underwriting decision |
 | `POST /payments` | customer, agent | Pay premium → policy issued |
-| `GET /policies/:id`, `POST /policies/:id/renew`, `POST /policies/:id/endorse` | owner | Policy details, renewal, endorsement |
+| `GET /policies/:id`, `POST /policies/:id/renew`, `POST /policies/:id/endorse`, `POST /policies/:id/cancel` | owner | Policy details, renewal, endorsement, cancellation with pro-rata refund |
 | `POST /claims` (alias `/claim`), `POST /claims/:id/documents` | customer, agent | Register claim (SAD 4.3.2), add documents |
 | `POST /claims/:id/decision`, `POST /claims/:id/settle` | adjuster / admin | Workflow decision; settlement payout |
 | `GET /workflow/tasks`, `POST /workflow/tasks/:id/complete` | staff | Task inbox |
@@ -117,7 +117,7 @@ All endpoints are under `/api/v1`, return JSON errors as `{ code, message, trace
 
 ## Configuration
 
-See [.env.example](.env.example). For any environment that keeps data, set `DATA_KEY`, `JWT_SECRET` and `SIGNING_KEY_PEM`. Otherwise random keys are generated on each start and stored encrypted data becomes unreadable after a restart. Set `TLS_CERT` and `TLS_KEY` to serve HTTPS with TLS 1.2 as the minimum version.
+See [.env.example](.env.example). For any environment that keeps data, set `DATA_KEY`, `JWT_SECRET` and `SIGNING_KEY_PEM`. Otherwise random keys are generated on each start and stored encrypted data becomes unreadable after a restart. Set `TLS_CERT` and `TLS_KEY` to serve HTTPS with TLS 1.2 as the minimum version. Policy cancellations refund the unexpired premium pro-rata, less a short-rate retention set by `CANCELLATION_FEE_PERCENT` (default 5).
 
 ### Authentication and session security
 

@@ -151,6 +151,67 @@ module.exports = function policiesModule(ctx) {
     return { endorsementId, premiumAdjustment, policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)) };
   }
 
+  // Policy cancellation (IWA-F-014): refunds the unexpired portion of the
+  // premium on a pro-rata basis, less a configurable short-rate retention.
+  async function cancel(policyId, { reason }, user) {
+    const p = getAccessible(user, policyId);
+    if (p.status !== 'ACTIVE') throw conflict('NOT_ACTIVE', `Policy is ${p.status}; only active policies can be cancelled`);
+    const endPlus = addDays(p.end_date, 1); // cover runs through end_date inclusive
+    const totalDays = daysBetween(p.start_date, endPlus);
+    const remainingDays = daysBetween(today(), endPlus);
+    if (remainingDays <= 0) throw conflict('ALREADY_EXPIRED', 'Policy has already expired');
+    const reasonText = String(reason || '').trim();
+    if (reasonText && (reasonText.length < 3 || reasonText.length > 500)) throw badRequest('reason must be 3-500 characters');
+
+    const grossRefund = round2((p.premium * remainingDays) / totalDays);
+    const fee = round2(grossRefund * (config.cancellationFeePercent / 100));
+    const refundAmount = round2(Math.max(0, grossRefund - fee));
+
+    const cancellationId = newId('C');
+    db.transaction(() => {
+      db.run("UPDATE policies SET status = 'CANCELLED' WHERE id = ?", p.id);
+      db.run(
+        'INSERT INTO cancellations (id, policy_id, reason, gross_refund, fee, refund_amount, remaining_days, cancelled_by, created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+        cancellationId, p.id, reasonText || null, grossRefund, fee, refundAmount, remainingDays, user.id, nowIso(),
+      );
+    });
+
+    const customer = db.get('SELECT name FROM customers WHERE id = ?', p.customer_id);
+    const doc = ctx.services.documents.generateSignedPdf({
+      kind: 'CANCELLATION',
+      ownerCustomerId: p.customer_id,
+      referenceId: p.id,
+      filename: `${p.policy_number}-cancellation.pdf`,
+      title: `Cancellation ${p.policy_number}`,
+      lines: [
+        { text: 'IWAS Insurance', size: 18, bold: true },
+        { text: 'Policy Cancellation Letter', size: 14, bold: true, gap: 4 },
+        { rule: true, gap: 4 },
+        `Policy number: ${p.policy_number}`,
+        `Policyholder: ${customer?.name ?? p.customer_id}`,
+        `Coverage: ${p.coverage_type.toUpperCase()}`,
+        `Premium paid: ${inr(p.premium)} (incl. GST)`,
+        `Period of insurance: ${p.start_date} to ${p.end_date}`,
+        `Cancellation effective: ${today()}`,
+        ...(reasonText ? [`Reason: ${reasonText}`] : []),
+        { text: 'Refund', bold: true, gap: 8 },
+        `Pro-rata refund (${remainingDays} of ${totalDays} day(s)): ${inr(grossRefund)}`,
+        `Cancellation charge (${config.cancellationFeePercent}%): ${inr(fee)}`,
+        { text: `Net refund: ${inr(refundAmount)}`, bold: true },
+        'The refund will be credited to the original payment method within 5-7 business days.',
+      ],
+    });
+    db.run('UPDATE cancellations SET document_id = ? WHERE id = ?', doc.id, cancellationId);
+
+    const refund = await ctx.services.payments.refund({ policyId: p.id, amount: refundAmount, reason: reasonText || 'Policy cancellation', actorId: user.id });
+
+    audit.record(user.id, 'POLICY_CANCELLED', 'policy', p.id, { cancellationId, reason: reasonText, grossRefund, fee, refundAmount, remainingDays });
+    ctx.services.notifications.notifyCustomer(p.customer_id, 'POLICY_CANCELLED', `Policy ${p.policy_number} has been cancelled. A refund of ${inr(refundAmount)} has been initiated.`);
+    bus.publish('policy.cancelled', { policyId: p.id, customerId: p.customer_id, refundAmount });
+
+    return { cancellationId, grossRefund, fee, refundAmount, remainingDays, documentId: doc.id, refundId: refund.refundId, policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)) };
+  }
+
   // Daily job: renewal reminders at 30/15/7 days and expiry (IWA-F-011).
   function runRenewalReminders(asOf = today()) {
     const sent = [];
@@ -204,6 +265,7 @@ module.exports = function policiesModule(ctx) {
       ...present(p),
       endorsements: db.all('SELECT * FROM endorsements WHERE policy_id = ? ORDER BY created_at', p.id)
         .map((e) => ({ ...e, changes: parseJson(e.changes, {}), previous: parseJson(e.previous, {}) })),
+      cancellation: db.get('SELECT * FROM cancellations WHERE policy_id = ? ORDER BY created_at DESC LIMIT 1', p.id) || null,
       documents: db.all("SELECT id, kind, filename, created_at FROM documents WHERE reference_id = ? OR reference_id IN (SELECT id FROM payments WHERE policy_id = ?) ORDER BY created_at", p.id, p.id),
     });
   });
@@ -219,5 +281,9 @@ module.exports = function policiesModule(ctx) {
     res.json(endorse(req.params.id, req.body || {}, req.user));
   });
 
-  return { issue, renew, endorse, runRenewalReminders, getAccessible, present, router };
+  router.post('/:id/cancel', requireRole('CUSTOMER', 'AGENT', 'ADMIN'), ah(async (req, res) => {
+    res.json(await cancel(req.params.id, req.body || {}, req.user));
+  }));
+
+  return { issue, renew, endorse, cancel, runRenewalReminders, getAccessible, present, router };
 };
