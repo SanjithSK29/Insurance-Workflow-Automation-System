@@ -96,7 +96,7 @@ describe('Policy issuance and management', () => {
   test('TC-Endorse-01: endorsement is applied and recorded in the audit trail', async () => {
     const c = await t.newCustomer('end1');
     const { policy } = await t.buyPolicy(c);
-    const res = await t.call('POST', `/policies/${policy.policyId}/endorse`, { token: c.token, body: { nominee: 'Meera Kumar', sumInsured: 700000 } });
+    const res = await t.call('POST', `/policies/${policy.policyId}/endorse`, { token: c.token, body: { nominee: 'Meera Kumar', sumInsured: 700000, paymentToken: 'tok_success' } });
     assert.equal(res.status, 200);
     assert.equal(res.body.policy.nominee, 'Meera Kumar');
     assert.equal(res.body.policy.sumInsured, 700000);
