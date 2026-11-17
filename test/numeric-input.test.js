@@ -71,4 +71,20 @@ describe('Numeric inputs through the API', () => {
     assert.equal(rename.status, 200);
     assert.equal(t.ctx.db.get('SELECT income FROM customers WHERE id = ?', c.customerId).income, 1_000_000);
   });
+
+  test('TC-Endorse-02: a coerced sum insured cannot lower cover or trigger a refund (DEF-06)', async () => {
+    const c = await t.newCustomer('num-e1');
+    const { policy } = await t.buyPolicy(c);
+    for (const sumInsured of ['0x10000', [700000], true]) {
+      const res = await t.call('POST', `/policies/${policy.policyId}/endorse`, { token: c.token, body: { sumInsured } });
+      assert.equal(res.status, 400, `sumInsured ${JSON.stringify(sumInsured)}`);
+    }
+    const row = t.ctx.db.get('SELECT sum_insured FROM policies WHERE id = ?', policy.policyId);
+    assert.equal(row.sum_insured, 500000, 'cover unchanged');
+    assert.equal(t.ctx.db.get('SELECT COUNT(*) AS n FROM endorsements WHERE policy_id = ?', policy.policyId).n, 0, 'no endorsement recorded');
+    const ok = await t.call('POST', `/policies/${policy.policyId}/endorse`, { token: c.token, body: { sumInsured: '600000' } });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.body.policy.sumInsured, 600000);
+    assert.ok(ok.body.premiumAdjustment > 0, 'raising cover charges extra premium');
+  });
 });

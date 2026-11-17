@@ -3,7 +3,7 @@
 const crypto = require('node:crypto');
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
-const { ah, addDays, addYears, daysBetween, today, round2, ageOn, parseJson } = require('../core/util');
+const { ah, addDays, addYears, daysBetween, today, round2, ageOn, parseJson, parseNumber } = require('../core/util');
 const { requireRole } = require('../security/middleware');
 const { calculatePremium, PRODUCTS } = require('./quotes');
 const { badRequest, notFound, conflict, unprocessable } = require('../core/errors');
@@ -122,7 +122,7 @@ module.exports = function policiesModule(ctx) {
       previous.address = p.address; next.address = v;
     }
     if (changes.sumInsured !== undefined) {
-      const si = Number(changes.sumInsured);
+      const si = parseNumber(changes.sumInsured);
       const customer = db.get('SELECT dob, income FROM customers WHERE id = ?', p.customer_id);
       if (!Number.isFinite(si) || si < 50_000) throw badRequest('sumInsured must be at least 50,000');
       if (si > PRODUCTS[p.coverage_type].maxSumInsured(customer.income)) throw badRequest('sumInsured exceeds the maximum allowed for this income');
