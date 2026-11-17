@@ -42,4 +42,33 @@ describe('Numeric inputs through the API', () => {
     assert.equal(asStrings.body.premium, asNumbers.body.premium);
     assert.equal((await quote({ sumInsured: '' })).status, 201, 'blank sum insured still means "use the default"');
   });
+
+  const profile = { name: 'Num Test', dob: '1990-01-15', phone: '9876501234', aadhaar: '234512341234', pan: 'ABCPK1234Z' };
+  async function registered(tag) {
+    const email = `${tag}@test.local`;
+    await t.call('POST', '/auth/register', { body: { email, name: 'Num Test', password: 'Test@12345' } });
+    return t.login(email);
+  }
+
+  test('TC-KYC-03: customer income refuses true, blank and other coerced values (DEF-05)', async () => {
+    const token = await registered('num-c1');
+    for (const income of [true, '', ' ', [500000], '0x10000', null]) {
+      const res = await t.call('POST', '/customers', { token, body: { ...profile, income } });
+      assert.equal(res.status, 400, `income ${JSON.stringify(income)}`);
+      assert.match(res.body.message, /income must be a non-negative number/);
+    }
+    const ok = await t.call('POST', '/customers', { token, body: { ...profile, income: '750000' } });
+    assert.equal(ok.status, 201);
+    const zero = await t.call('POST', '/customers', { token: await registered('num-c2'), body: { ...profile, income: 0 } });
+    assert.equal(zero.status, 201, 'an actual 0 (e.g. a student) is still allowed');
+  });
+
+  test('TC-KYC-04: a profile update keeps the old income when none is sent and refuses a coerced one', async () => {
+    const c = await t.newCustomer('num-c3');
+    const bad = await t.call('PATCH', `/customers/${c.customerId}`, { token: c.token, body: { income: true } });
+    assert.equal(bad.status, 400);
+    const rename = await t.call('PATCH', `/customers/${c.customerId}`, { token: c.token, body: { name: 'Renamed Person' } });
+    assert.equal(rename.status, 200);
+    assert.equal(t.ctx.db.get('SELECT income FROM customers WHERE id = ?', c.customerId).income, 1_000_000);
+  });
 });

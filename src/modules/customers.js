@@ -2,7 +2,7 @@
 // PII is encrypted at rest and masked in responses for non-authorized roles.
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
-const { ah, ageOn, isIsoDate } = require('../core/util');
+const { ah, ageOn, isIsoDate, parseNumber } = require('../core/util');
 const { CircuitBreaker, retry } = require('../core/resilience');
 const { requireRole } = require('../security/middleware');
 const { maskAadhaar, maskPan, maskPhone, maskEmail, canSeePii } = require('../security/pii');
@@ -38,7 +38,7 @@ module.exports = function customersModule(ctx) {
     const p = {
       name: body.name?.trim(),
       dob: body.dob,
-      income: Number(body.income),
+      income: parseNumber(body.income),
       email: body.email?.trim().toLowerCase() || null,
       phone: body.phone ? String(body.phone).replace(/\D/g, '').slice(-10) : null,
       aadhaar: body.aadhaar ? String(body.aadhaar).replace(/[\s-]/g, '') : null,
