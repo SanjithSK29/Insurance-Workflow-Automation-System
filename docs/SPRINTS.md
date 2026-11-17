@@ -5,7 +5,7 @@
 | Project | Insurance Workflow Automation System (IWAS) |
 | Covers | Course Deliverables Part-2 (backlog, story points, Sprint 1, Sprint 2) and the Part-3 spill-over |
 | Recorded | 17-11-2026, after the sprints, by the QA Lead. Not a plan made at the time; see "What is real and what is estimated" below. |
-| Board | GitHub Project "IWAS Backlog" linked to this repository |
+| Board | GitHub Project "IWAS Backlog": https://github.com/users/vxs01/projects/1 (same 32 items, story points, sprints, owners and delivering PRs as the tables below). It is owned by the QA Lead's account; GitHub links a project only to repositories with the same owner, so it is linked from this document. |
 
 > **Honest note.** The team did not keep a GitHub Project board, story points or a written sprint plan during the sprint weeks. This document reconstructs one afterwards so the work can be discussed in sprint terms, and compares it with what was actually delivered and when. Nothing here is backdated.
 
