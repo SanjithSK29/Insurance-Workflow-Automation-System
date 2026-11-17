@@ -1,11 +1,14 @@
+/* Colour pairs are checked against WCAG 2.1 AA (4.5:1 text, 3:1 focus ring)
+   by test/ui-accessibility.test.js (TC-UX-04); keep new colours as tokens here. */
 :root {
   --bg: #f5f7fb; --panel: #fff; --ink: #1b2333; --muted: #5b6577; --line: #dde3ee;
-  --brand: #1f5eff; --brand-ink: #fff; --ok: #137a3f; --warn: #a15c00; --bad: #b42318;
+  --brand: #1a4fd6; --brand-ink: #fff; --ok: #137a3f; --warn: #a15c00; --bad: #b42318; --on-bad: #fff;
   --ok-bg: #e6f6ec; --warn-bg: #fff4e0; --bad-bg: #fde8e6; --info-bg: #e8efff;
-  --radius: 10px; --focus: 3px solid #ffbf47;
+  --radius: 10px; --focus: 3px solid #1b2333;
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #11151d; --panel: #1a202b; --ink: #e8ecf3; --muted: #a3adbf; --line: #2c3442;
+    --brand: #7aa2ff; --brand-ink: #0b1220; --on-bad: #1b0b0a; --focus: 3px solid #ffbf47;
     --ok-bg: #12301f; --warn-bg: #3a2a0d; --bad-bg: #3d1714; --info-bg: #182446; --ok: #5fd08f; --warn: #f0b04f; --bad: #ff8a80; }
 }
 * { box-sizing: border-box; }
@@ -46,7 +49,7 @@ label.check { display: flex; align-items: center; gap: 8px; }
 label.check input { width: auto; }
 button { font: inherit; font-weight: 600; cursor: pointer; padding: 9px 14px; border-radius: 8px; border: 1px solid var(--brand); background: var(--brand); color: var(--brand-ink); }
 button.ghost { background: transparent; color: var(--brand); }
-button.danger { background: var(--bad); border-color: var(--bad); }
+button.danger { background: var(--bad); border-color: var(--bad); color: var(--on-bad); }
 button:disabled { opacity: .55; cursor: not-allowed; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
@@ -77,7 +80,7 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
 
 #toast { position: fixed; right: 16px; bottom: 16px; z-index: 20; display: grid; gap: 8px; }
 .toast { padding: 10px 14px; border-radius: 8px; background: var(--ink); color: var(--bg); box-shadow: 0 6px 24px rgba(0,0,0,.2); max-width: 380px; }
-.toast.err { background: var(--bad); color: #fff; }
+.toast.err { background: var(--bad); color: var(--on-bad); }
 
 .login { max-width: 420px; margin: 40px auto; }
 .demo { display: grid; gap: 6px; margin-top: 12px; }
