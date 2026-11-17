@@ -87,4 +87,18 @@ describe('Numeric inputs through the API', () => {
     assert.equal(ok.body.policy.sumInsured, 600000);
     assert.ok(ok.body.premiumAdjustment > 0, 'raising cover charges extra premium');
   });
+
+  test('TC-Admin-02: the risk threshold refuses true, blank and arrays (DEF-07)', async () => {
+    const set = (value) => t.call('PUT', '/admin/settings/risk-threshold', { token: t.tokens.ADMIN, body: { value } });
+    const before = t.ctx.services.underwriting.riskThreshold();
+    for (const value of [true, false, '', [70], '0x40', null]) {
+      const res = await set(value);
+      assert.equal(res.status, 400, `value ${JSON.stringify(value)}`);
+    }
+    assert.equal(t.ctx.services.underwriting.riskThreshold(), before, 'threshold unchanged');
+    const ok = await set('70');
+    assert.equal(ok.status, 200);
+    assert.equal(ok.body.riskThreshold, 70);
+    await set(before); // restore for other tests in this file
+  });
 });

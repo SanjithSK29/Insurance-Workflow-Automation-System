@@ -1,7 +1,7 @@
 // Operations: dashboards (IWA-F-032), CSV/PDF reports (IWA-F-033), audit log
 // access (IWA-F-034), runtime settings and scheduled jobs.
 const express = require('express');
-const { today, round2, isIsoDate, parseJson, daysBetween } = require('../core/util');
+const { today, round2, isIsoDate, parseJson, daysBetween, parseNumber } = require('../core/util');
 const { requireRole } = require('../security/middleware');
 const { buildPdf } = require('./pdf');
 const { badRequest, notFound } = require('../core/errors');
@@ -136,7 +136,7 @@ module.exports = function adminModule(ctx) {
   });
 
   router.put('/settings/risk-threshold', requireRole('ADMIN'), (req, res) => {
-    const value = Number(req.body?.value);
+    const value = parseNumber(req.body?.value);
     if (!Number.isInteger(value) || value < 0 || value > 100) throw badRequest('value must be an integer 0-100');
     const old = ctx.services.underwriting.riskThreshold();
     db.run("INSERT INTO settings (key, value) VALUES ('riskThreshold', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", String(value));
