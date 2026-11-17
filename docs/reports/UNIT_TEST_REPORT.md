@@ -6,9 +6,9 @@
 | Report | Unit Test Report (Deliverables Part-3, item 2.b.i) |
 | Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241 |
 | Test plan | STP v1.0 §5 (unit level); test cases in [TEST_CASES.md](../TEST_CASES.md) v2.1 |
-| Build under test | Branch `vishal-qa-hardening` (= `main` at `b4c18dd` + PR #9 + PR #10) |
+| Build under test | Branch `vishal-input-validation` (= `main` at `b4c18dd` + PR #9 + PR #10 + PR #11) |
 | Executed on | 17-11-2026 (planned window 02-11 to 06-11-2026; see section 8) |
-| Result | **114 / 114 automated tests passed, 0 failed, 0 skipped.** 3 defects found and fixed during the cycle. |
+| Result | **122 / 122 automated tests passed, 0 failed, 0 skipped.** 7 defects found and fixed during the cycle. |
 
 ## 1. Scope
 
@@ -33,16 +33,16 @@ This report covers the whole suite, with detail on the QA Lead's modules (claims
 
 ## 3. Summary
 
-| Metric | Baseline (`main`, 17-11-2026) | After PR #9 | Now (PR #10) |
-| --- | --- | --- | --- |
-| Test files | 7 | 10 | **16** |
-| Test suites | 11 | 15 | **22** |
-| Test cases | 51 | 86 | **114** |
-| Passed | 51 | 86 | **114** |
-| Failed | 0 | 0 | **0** |
-| Skipped / todo | 0 | 0 | 0 |
-| Pass rate | 100 % | 100 % | **100 %** |
-| Suite duration | about 14 s | about 14 s | about 19 s |
+| Metric | Baseline (`main`, 17-11-2026) | After PR #9 | After PR #10 | Now (PR #11) |
+| --- | --- | --- | --- | --- |
+| Test files | 7 | 10 | 16 | **17** |
+| Test suites | 11 | 15 | 22 | **24** |
+| Test cases | 51 | 86 | 114 | **122** |
+| Passed | 51 | 86 | 114 | **122** |
+| Failed | 0 | 0 | 0 | **0** |
+| Skipped / todo | 0 | 0 | 0 | 0 |
+| Pass rate | 100 % | 100 % | 100 % | **100 %** |
+| Suite duration | about 14 s | about 14 s | about 19 s | about 19 s |
 
 ## 4. Results by test file
 
@@ -64,7 +64,8 @@ This report covers the whole suite, with detail on the QA Lead's modules (claims
 | **claims-security.test.js** (PR #10) | Vishal | 7 | 7 | 0 |
 | **settlement-letter.test.js** (PR #10) | Vishal | 4 | 4 | 0 |
 | **claim-tracking.test.js** (PR #10) | Vishal | 5 | 5 | 0 |
-| **Total** | | **114** | **114** | **0** |
+| **numeric-input.test.js** (PR #11) | Vishal | 8 | 8 | 0 |
+| **Total** | | **122** | **122** | **0** |
 
 `test/helpers.js` is the shared harness (owner: Vishal), not a test file.
 
@@ -120,9 +121,11 @@ Provider outages are simulated by replacing the swappable provider adapters (`pr
 
 Covered by TC-Claim-01..11, TC-WF-01..03, TC-Settle-01/08/09, TC-Contract-01..05, TC-Sec-Claim-01..07, TC-Notify-12 and TC-Track-01..05 (see [TEST_CASES.md](../TEST_CASES.md) §3.5, 3.7, 3.9–3.14): validation of every input field, document type checks, role-scoped listing, decision and settlement guards, the SAD API contract, RBAC and injection attempts, isolation from notification failures, and the three workflow event consumers.
 
-### 5.5 `src/core/util.js`: `isIsoDate()` (shared)
+### 5.5 `src/core/util.js`: `isIsoDate()` and `parseNumber()` (shared)
 
 TC-Date-01..03: real dates (including 29 February in leap years) accepted; impossible dates (2026-02-30, 2026-04-31, 2025-02-29, 1900-02-29) and wrong formats rejected (DEF-02).
+
+TC-Num-01/02: `parseNumber()` accepts finite numbers and plain decimal strings and rejects `true`, `[5]`, `{}`, `null`, blanks, hex, exponent and comma strings and Infinity. It is used by claims (DEF-03) and, since PR #11, by quotes, customer income, endorsements and the admin risk threshold (DEF-04..07: TC-Quote-06/07, TC-KYC-03/04, TC-Endorse-02, TC-Admin-02).
 
 ## 6. Defects found by the unit tests
 
@@ -133,6 +136,10 @@ Each defect was reproduced with a failing test, committed, then fixed in a separ
 | DEF-01 | High | Server process crashes when a customer's contact details cannot be decrypted (unhandled promise rejection from notifications) | TC-Notify-10, TC-Notify-11 | Fixed, verified |
 | DEF-02 | Medium | Impossible dates such as 2026-02-30 accepted as claim incident date / date of birth | TC-Date-02, TC-Claim-11 | Fixed, verified |
 | DEF-03 | Low | Claim and approved amounts accept `true`, `[5]`, `"0x10"` through `Number()` coercion | TC-Sec-Claim-06, TC-Sec-Claim-07 | Fixed, verified |
+| DEF-04 | Low | Quote inputs accept `age: [30]`, `income: "0x10000"`, `term: true` (Sanjith's module) | TC-Quote-06 | Fixed, verified |
+| DEF-05 | Medium | Customer income `true` stored as 1, blank/null as 0 (Sanjith's module) | TC-KYC-03 | Fixed, verified |
+| DEF-06 | Medium | Endorsement `sumInsured: "0x10000"` cut cover to 65,536 and refunded premium (Samarth's module) | TC-Endorse-02 | Fixed, verified |
+| DEF-07 | Medium | Risk threshold `true` stored as 1 (Sampreeth's module) | TC-Admin-02 | Fixed, verified |
 
 Open defects at the end of the cycle: **0**.
 

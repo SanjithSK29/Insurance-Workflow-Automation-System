@@ -6,7 +6,7 @@
 | Report | System Validation Report (Deliverables Part-3, item 2.b.ii) |
 | Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241 |
 | Validated against | SRS v1.0 (FR, NFR, security requirements), STP v1.0 §3, §5, §5.1 |
-| Build under test | Branch `vishal-qa-hardening` (= `main` at `b4c18dd` + PR #9 + PR #10, including the three defect fixes) |
+| Build under test | Branch `vishal-input-validation` (= `main` at `b4c18dd` + PR #9 + PR #10 + PR #11, including all seven defect fixes) |
 | Executed on | 17-11-2026 |
 | Verdict | **Accepted for demo.** All high-priority functional and security requirements pass. Three non-functional checks need a deployed environment and remain open for UAT (section 6). |
 
@@ -32,12 +32,12 @@ Unit tests show that each module works. This report answers the system-level que
 
 | Req ID | Requirement (SRS) | System-level evidence | Result |
 | --- | --- | --- | --- |
-| IWA-F-001 | Personalised quote within 10 s | TC-Quote-01..05: valid quote with premium breakdown under 10 s, invalid input 400, actuarial outage 503, expired/reused quote refused | P |
-| IWA-F-002 | Risk score 0–100, high risk to manual review | TC-UW-01a/b, TC-UW-02: auto-approve vs manual review, admin-configurable threshold | P |
-| IWA-F-003 | KYC before issuance | TC-KYC-01/02: pass/fail before issuance; provider outage goes to manual queue and resumes | P |
+| IWA-F-001 | Personalised quote within 10 s | TC-Quote-01..05: valid quote with premium breakdown under 10 s, invalid input 400, actuarial outage 503, expired/reused quote refused; TC-Quote-06/07: coerced values such as `income: "0x10000"` refused (DEF-04) | P |
+| IWA-F-002 | Risk score 0–100, high risk to manual review | TC-UW-01a/b, TC-UW-02: auto-approve vs manual review, admin-configurable threshold; TC-Admin-02: threshold `true` refused (DEF-07) | P |
+| IWA-F-003 | KYC before issuance | TC-KYC-01/02: pass/fail before issuance; provider outage goes to manual queue and resumes; TC-KYC-03/04: profile income `true`/blank refused (DEF-05) | P |
 | IWA-F-010 | Signed digital policy PDF after payment | TC-Policy-01/02: policy issued only after successful payment, PDF signature verifies | P |
 | IWA-F-011 | Renewal reminders at 30/15/7 days | TC-Renew-01/02 | P |
-| IWA-F-012 | Endorsement with audit trail | TC-Endorse-01 | P |
+| IWA-F-012 | Endorsement with audit trail | TC-Endorse-01; TC-Endorse-02: a hex sum insured can no longer cut cover and refund premium (DEF-06) | P |
 | IWA-F-013 | Invoice PDF with tax breakup | TC-Invoice-01 | P |
 | IWA-F-014 | Cancellation with pro-rata refund | TC-Cancel-01/02; TC-Claim-04 shows a cancelled policy accepts no claims | P |
 | IWA-F-020 | Claim registration with document upload (10 MB) | TC-Claim-01..11: claim ID returned, 10 MB limit (413), type sniffing, ownership (403), real calendar dates only, policy status, role-scoped listing, extra documents; TC-Contract-01..05: the SAD §4.3.2 API and §4.4 error envelope | P |
@@ -132,4 +132,4 @@ As the FAQ allows, these are documented for the demo:
 
 ## 8. Conclusion
 
-All 18 functional requirements and all 5 security requirements in the RTM pass at system level. NF-001 and NF-003 pass, and NF-004 passes for immutability. NF-002, NF-005 and the full NF-001 load test need a deployed environment and are scheduled for UAT. Validation found three defects in the claims area (DEF-01 High, DEF-02 Medium, DEF-03 Low); all three were fixed and re-tested in the same cycle. The STP exit criteria are met: 100 % of planned automated tests executed (114/114 passed), 0 critical or open defects, and all high-priority acceptance criteria met.
+All 18 functional requirements and all 5 security requirements in the RTM pass at system level. NF-001 and NF-003 pass, and NF-004 passes for immutability. NF-002, NF-005 and the full NF-001 load test need a deployed environment and are scheduled for UAT. Validation found seven defects: three in the claims area (DEF-01 High, DEF-02 Medium, DEF-03 Low) and four of the same input-coercion kind in quotes, customers, endorsements and admin settings (DEF-04 Low, DEF-05..07 Medium); all were fixed and re-tested in the same cycle. The STP exit criteria are met: 100 % of planned automated tests executed (122/122 passed), 0 critical or open defects, and all high-priority acceptance criteria met.
