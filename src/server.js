@@ -17,9 +17,25 @@ function tlsOptions(config) {
   };
 }
 
+// With a database file, keys that change on restart make stored data unusable:
+// PII can no longer be decrypted (see DEF-01), tokens and signatures stop
+// verifying. Returns the variables that should be set but are not.
+function missingPersistentSecrets(config, env = process.env) {
+  if (!config.dbFile || config.dbFile === ':memory:') return [];
+  return ['DATA_KEY', 'JWT_SECRET', 'SIGNING_KEY_PEM'].filter((name) => !env[name]);
+}
+
 async function main() {
   const { app, ctx } = createApp();
   const { config, logger } = ctx;
+
+  const missing = missingPersistentSecrets(config);
+  if (missing.length) {
+    logger.warn('persistent_db_without_fixed_keys', { dbFile: config.dbFile, missing });
+    console.warn(`\nWARNING: data is stored in ${config.dbFile} but ${missing.join(', ')} ${missing.length > 1 ? 'are' : 'is'} not set.`
+      + '\nRandom keys are generated on every start, so encrypted data, logins and document signatures will not survive a restart.'
+      + '\nSet them as described in .env.example.\n');
+  }
 
   if (config.seedDemoData && (await seedDemo(ctx))) {
     logger.info('demo_data_seeded', { users: DEMO_USERS.map((u) => u.role) });
@@ -55,4 +71,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { tlsOptions };
+module.exports = { tlsOptions, missingPersistentSecrets };

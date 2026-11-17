@@ -30,8 +30,21 @@ module.exports = function notificationsModule(ctx) {
     insert({ userId: c.user_id, customerId, channel: 'IN_APP', type, message, status: 'DELIVERED' });
     if (agentId) insert({ userId: agentId, customerId, channel: 'IN_APP', type, message, status: 'DELIVERED' });
 
-    const email = ctx.crypto.decrypt(c.email_enc);
-    const phone = ctx.crypto.decrypt(c.phone_enc);
+    // Contact details are encrypted at rest. If one cannot be decrypted (e.g.
+    // the data key changed), record that channel as FAILED instead of throwing:
+    // callers do not await this function, so a rejection would crash the
+    // process (DEF-01).
+    const readContact = (blob, channel) => {
+      try {
+        return ctx.crypto.decrypt(blob);
+      } catch (err) {
+        insert({ customerId, userId: c.user_id, channel, type, message, status: 'FAILED' });
+        logger.warn('notification_contact_unreadable', { customerId, channel, error: err.message });
+        return null;
+      }
+    };
+    const email = readContact(c.email_enc, 'EMAIL');
+    const phone = readContact(c.phone_enc, 'SMS');
     const sends = [];
     if (email) sends.push(['EMAIL', () => providers.email(email, type, message)]);
     if (phone) sends.push(['SMS', () => providers.sms(phone, message)]);

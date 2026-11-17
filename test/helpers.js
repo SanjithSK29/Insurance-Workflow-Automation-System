@@ -73,6 +73,7 @@ async function startApp(overrides = {}) {
 
   return {
     ctx, call, users, tokens, login, newCustomer, buyPolicy,
+    base, // for tests that must send raw (e.g. malformed) request bodies
     close: () => new Promise((resolve) => server.close(() => { close(); resolve(); })),
   };
 }

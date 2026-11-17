@@ -2,7 +2,7 @@
 // checks, BPMN approval routing, settlement and claimant notifications.
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
-const { ah, today, isIsoDate, round2, parseJson } = require('../core/util');
+const { ah, today, isIsoDate, round2, parseJson, parseNumber } = require('../core/util');
 const { requireRole } = require('../security/middleware');
 const { detectFraud } = require('./fraud');
 const { computeSettlement } = require('./settlement');
@@ -32,6 +32,14 @@ const STATUS_MESSAGES = {
 
 module.exports = function claimsModule(ctx) {
   const { db, config, audit, bus } = ctx;
+
+  // Claimant notifications are fire-and-forget: a claim must not fail, and the
+  // process must not crash, because a notification could not be sent.
+  const notifyClaimant = (customerId, type, message) => {
+    Promise.resolve()
+      .then(() => ctx.services.notifications.notifyCustomer(customerId, type, message))
+      .catch((err) => ctx.logger.error('claim_notification_failed', { customerId, type, error: err.message }));
+  };
 
   function decodeDocuments(docs = []) {
     if (!Array.isArray(docs)) throw badRequest('documents must be an array');
@@ -66,7 +74,7 @@ module.exports = function claimsModule(ctx) {
       status, settlement ? JSON.stringify(settlement) : null, nowIso(), claimId);
     const claim = db.get('SELECT * FROM claims WHERE id = ?', claimId);
     audit.record('claims-service', 'CLAIM_' + status, 'claim', claimId, settlement ? { payable: settlement.payableAmount } : {});
-    ctx.services.notifications.notifyCustomer(claim.customer_id, 'CLAIM_' + status, STATUS_MESSAGES[status](claim, settlement));
+    notifyClaimant(claim.customer_id, 'CLAIM_' + status, STATUS_MESSAGES[status](claim, settlement));
     bus.publish('claim.status_changed', { claimId, status });
     return claim;
   }
@@ -78,7 +86,7 @@ module.exports = function claimsModule(ctx) {
     if (!CLAIM_TYPES[policy.coverage_type].includes(claimType)) {
       throw unprocessable('INVALID_CLAIM', `claimType must be one of ${CLAIM_TYPES[policy.coverage_type].join(', ')} for ${policy.coverage_type} policies`);
     }
-    const amount = Number(body.amount);
+    const amount = parseNumber(body.amount);
     if (!Number.isFinite(amount) || amount <= 0) throw unprocessable('INVALID_CLAIM', 'amount must be a positive number');
     if (!isIsoDate(body.incidentDate)) throw unprocessable('INVALID_CLAIM', 'incidentDate must be YYYY-MM-DD');
     if (body.incidentDate > today()) throw unprocessable('INVALID_CLAIM', 'incidentDate cannot be in the future');
@@ -108,7 +116,7 @@ module.exports = function claimsModule(ctx) {
     });
     audit.record(user.id, 'CLAIM_REGISTERED', 'claim', claim.id, { policyId: policy.id, amount, fraudScore: fraud.score });
     if (fraud.flagged) audit.record('fraud-engine', 'FRAUD_FLAG_RAISED', 'claim', claim.id, { score: fraud.score, rules: fraud.flags.map((f) => f.code) });
-    ctx.services.notifications.notifyCustomer(policy.customer_id, 'CLAIM_REGISTERED', STATUS_MESSAGES.REGISTERED(claim));
+    notifyClaimant(policy.customer_id, 'CLAIM_REGISTERED', STATUS_MESSAGES.REGISTERED(claim));
 
     const wf = ctx.services.workflow.start(WORKFLOW_KEY, claim.id, {
       amount, claimType, coverageType: policy.coverage_type, fraudFlagged: fraud.flagged, fraudScore: fraud.score,
@@ -259,7 +267,7 @@ module.exports = function claimsModule(ctx) {
     const { outcome, approvedAmount, comment } = req.body || {};
     const variables = {};
     if (approvedAmount !== undefined && approvedAmount !== null && approvedAmount !== '') {
-      const amt = Number(approvedAmount);
+      const amt = parseNumber(approvedAmount);
       if (!Number.isFinite(amt) || amt < 0 || amt > claim.amount) throw badRequest('approvedAmount must be between 0 and the claimed amount');
       variables.approvedAmount = round2(amt);
     }

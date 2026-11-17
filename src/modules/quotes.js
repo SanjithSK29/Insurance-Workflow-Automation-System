@@ -2,7 +2,7 @@
 // type and term, with a full premium breakdown.
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
-const { addDays, today, round2, ageOn, parseJson } = require('../core/util');
+const { addDays, today, round2, ageOn, parseJson, parseNumber } = require('../core/util');
 const { badRequest, notFound, unavailable, forbidden } = require('../core/errors');
 
 // Product rules. Rates are annual premium per 1,000 of sum insured.
@@ -60,10 +60,10 @@ module.exports = function quotesModule(ctx) {
     const errors = [];
     const coverageType = String(input.coverageType || '').toLowerCase();
     const product = PRODUCTS[coverageType];
-    const age = Number(input.age);
-    const income = Number(input.income);
-    const term = input.term === undefined ? 1 : Number(input.term);
-    const sumInsured = input.sumInsured === undefined || input.sumInsured === null || input.sumInsured === '' ? undefined : Number(input.sumInsured);
+    const age = parseNumber(input.age);
+    const income = parseNumber(input.income);
+    const term = input.term === undefined ? 1 : parseNumber(input.term);
+    const sumInsured = input.sumInsured === undefined || input.sumInsured === null || input.sumInsured === '' ? undefined : parseNumber(input.sumInsured);
     if (!product) errors.push(`coverageType must be one of ${Object.keys(PRODUCTS).join(', ')}`);
     if (!Number.isInteger(age)) errors.push('age must be a whole number');
     if (!Number.isFinite(income) || income < 0) errors.push('income must be a non-negative number');

@@ -104,6 +104,46 @@ jobs:
           done
           echo "❌ server did not become healthy"; cat server.log; exit 1
 
+  # Code and branch coverage for the test reports (STP §14 metrics). The HTML
+  # report is attached to the run, and the summary is shown on the job page.
+  coverage:
+    name: Coverage report (c8)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Write coverage summary to the job page
+        if: always()
+        run: |
+          node -e "
+            const t = require('./coverage/coverage-summary.json').total;
+            const row = (k) => '| ' + k + ' | ' + t[k].pct + ' % | ' + t[k].covered + ' / ' + t[k].total + ' |';
+            console.log(['### Coverage', '', '| Metric | Coverage | Covered |', '| --- | --- | --- |',
+              row('statements'), row('branches'), row('functions'), row('lines')].join('\n'));
+          " >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload HTML coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
   security:
     name: Security scans (dependencies, secrets, CodeQL)
     runs-on: ubuntu-latest
