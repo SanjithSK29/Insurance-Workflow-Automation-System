@@ -95,6 +95,73 @@ After DEF-03, the QA Lead reviewed every module for the same `Number()` coercion
 
 **Expected for all four:** 400 `INVALID_INPUT` with the field's existing message, and no data changed. **Status:** fixed and verified; numbers and numeric strings (what the web UI sends) behave exactly as before, and each owner's existing tests still pass. Branch `vishal-input-validation` (PR #11).
 
+### DEF-08 to DEF-14: policies, payments, documents and web UI (Developer Lead review)
+
+Found by Samarth A (Developer Lead) on 17-11-2026 while reviewing and testing his own modules after PRs #6–#13. Each defect was reproduced with a failing test, committed, fixed and re-tested. Branch `samarth-dev-hardening`. Module owner for all seven: Samarth.
+
+| ID | Severity | Module | Requirement | Summary | Tests | Test commit | Fix commit |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| DEF-08 | **High** | `payments.js`, `policies.js` | IWA-F-010, F-011 | A double-submitted payment charges the customer twice and issues two policies; same for renewals | TC-Pay-03/04/05 | `ef83638` | `3348368` |
+| DEF-09 | **High** | `policies.js` | IWA-F-012 | Raising the sum insured gives the extra cover for free; lowering it never refunds | TC-Endorse-03/05 | `5cb6a49` | `b6c83ec` |
+| DEF-10 | Medium | `policies.js` (cancellation added in PR #8) | IWA-F-014 | After a renewal, cancellation refunds about half of what is owed | TC-Cancel-03/04/05 | `5cb6a49` | `b6c83ec` |
+| DEF-11 | Low | `policies.js` | IWA-F-012 | Endorsing `nominee: {}` stores "[object Object]"; arrays and numbers accepted as names and addresses | TC-Endorse-04 | `5cb6a49` | `b6c83ec` |
+| DEF-12 | Low | `pdf.js` | IWA-F-010, F-013 | Accented names print as "?" on every generated PDF ("Zoë Fernández" → "Zo? Fern?ndez") | TC-PDF-03, TC-Policy-03 | `51a078d` | `64c0d98` |
+| DEF-13 | Medium | `public/styles.css` | IWA-NF-005 | Five colour pairs fail WCAG 2.1 AA contrast, mostly in dark mode | TC-UX-04 | `2d80f7c` | `a2fafa9` |
+| DEF-14 | Medium | `public/app.js` | IWA-F-031, STRIDE "Spoofing" | Log out in the web UI leaves the session token valid on the server | TC-UX-05 | `f8ed5d5` | `4a5ea0c` |
+
+#### DEF-08: double-submitted payments charge twice
+
+**Steps:** with an approved application, send `POST /payments` twice at once (a double-click). Use the `tok_flaky` token, which makes the gateway time out once, like a slow bank.
+**Expected:** one charge and one policy; the second request is refused. **Actual:** both requests return 201; two `CAPTURED` payments and two policies for one application. `POST /policies/:id/renew` behaved the same way (two renewal charges).
+**Root cause:** the handler checks `status = 'APPROVED'`, then awaits the gateway. The second request passes the same check while the first is still waiting, because the status only changes after the charge.
+**Fix:** `withPaymentLock()` in `payments.js` holds a per-application or per-policy lock from the status check until the charge and issuance finish. A second request gets 409 `PAYMENT_IN_PROGRESS`. The lock is released on failure, so a declined payment can be retried (TC-Pay-05). IWAS runs as one Node process on SQLite, so an in-process lock is enough; see OBS-06 for multi-instance deployments.
+
+#### DEF-09: endorsements change cover without collecting or refunding premium
+
+**Steps:** on an active ₹5,00,000 health policy, `POST /policies/:id/endorse` with `{ "sumInsured": 700000 }`.
+**Expected:** the extra premium for the rest of the period is collected before the cover changes. **Actual:** 200, cover raised to ₹7,00,000, `premiumAdjustment: 4236.36` recorded, but no payment was taken. Lowering the cover recorded a negative adjustment but refunded nothing.
+**Fix:** a raise without `paymentToken` returns 402 `PAYMENT_REQUIRED` with the amount in `details.premiumAdjustment`; with a token the difference is charged first (purpose `ENDORSEMENT`) and a GST invoice is issued. A declined payment changes nothing. A reduction is refunded through `payments.refund()`. The web UI shows the amount and asks for confirmation. Vishal's TC-Endorse-02 was updated to send a payment token for its raise (`dc96bf0`).
+
+#### DEF-10: wrong cancellation refund after a renewal
+
+**Steps:** a policy with 44 days left is renewed early for another year (₹7,754.05), then cancelled the same day.
+**Expected:** refund of the unused 45 days of the old year plus the whole new year: ₹15,508.11 before the 5 % charge. **Actual:** ₹7,754.05.
+**Root cause:** `cancel()` (PR #8) spreads `policies.premium` over `start_date … end_date`. After a renewal, `premium` holds only the latest year's premium but the dates span both years, so the refund is roughly halved. Endorsement payments were not considered at all.
+**Fix:** `unusedPremium()` refunds what was paid for each period: the current period's premium pro-rated over that period only; when the policy was renewed early, the unused days of the previous period at that period's premium (from `payments`); and endorsement differences pro-rated over the days they covered. TC-Cancel-01/02 (Sanjith) pass unchanged.
+
+#### DEF-11: non-text nominee and address accepted
+
+**Steps:** endorse with `{ "nominee": {} }`, `["Asha","Rao"]` or `12345`.
+**Expected:** 400. **Actual:** 200; `String({})` was saved as "[object Object]". The `sumInsured` half of this check was already fixed by DEF-06 (Vishal) with `parseNumber()`, which the endorsement code keeps using.
+**Fix:** `parseText()` in `policies.js` accepts only JSON strings within the length limits.
+
+#### DEF-12: accented names print as "?" in PDFs
+
+**Steps:** a customer named "Zoë Fernández" buys a policy and opens the policy schedule.
+**Expected:** the name as written. **Actual:** "Zo? Fern?ndez" on the schedule, invoice, settlement and cancellation letters.
+**Root cause:** the PDF writer replaced every character outside ASCII, although its WinAnsi fonts can draw the Latin-1 range.
+**Fix:** printable Latin-1 is kept; curly quotes, dashes, the rupee sign and "…" are mapped to plain equivalents. Scripts the built-in fonts cannot draw (for example Devanagari) still become "?" (OBS-07).
+
+#### DEF-13: colour contrast below WCAG 2.1 AA
+
+**Found by:** TC-UX-04, which computes WCAG contrast ratios from the CSS colour tokens (jsdom cannot measure colour).
+
+| Pair | Theme | Before | After |
+| --- | --- | --- | --- |
+| Badge text and current nav item (brand on info background) | light | 4.44:1 | 5.82:1 |
+| Keyboard focus ring on page / card | light | 1.53:1 / 1.64:1 | 14.67:1 / 15.73:1 |
+| Links and ghost buttons (brand on panel) | dark | 3.19:1 | 6.57:1 |
+| Badge text and current nav item | dark | 2.97:1 | 6.12:1 |
+| White text on red buttons and error toasts | dark | 2.28:1 | 8.37:1 |
+
+Required: 4.5:1 for text, 3:1 for the focus ring (WCAG 1.4.3, 1.4.11). **Fix:** adjusted tokens in `public/styles.css`, a dark-mode brand colour and a new `--on-bad` token for text on red.
+
+#### DEF-14: Log out does not revoke the token
+
+**Steps:** sign in to the web UI, copy the token from `sessionStorage`, click **Log out**, then call `GET /api/v1/me` with the copied token.
+**Expected:** 401 (PR #6 added server-side revocation via `POST /auth/logout`). **Actual:** 200: the UI only deleted its own copy of the token.
+**Fix:** the Log out button calls `POST /auth/logout` before clearing the session.
+
 ## 3. Observations (not defects)
 
 | ID | Observation | Decision |
@@ -104,14 +171,19 @@ After DEF-03, the QA Lead reviewed every module for the same `Number()` coercion
 | OBS-03 | Claims can be filed without documents. | Intended: evidence can be added later; the claim gets NO_SUPPORTING_DOCUMENTS (+15). |
 | OBS-04 | The claim API returns status `UNDER_REVIEW` where the SAD example shows `REGISTERED`. | Documented deviation (docs/DEVIATIONS.md); REGISTERED is still the first timeline entry. |
 | OBS-05 | For a customer created by an agent (no login of their own), the customer's in-app copy has no user to show it to; the agent's copy is delivered. | Low impact; noted for a future change. |
+| OBS-06 | The DEF-08 payment lock lives in the Node process. | Correct for the documented single-process SQLite deployment. Running several instances needs a database-level lock (for example a `PAYMENT_PENDING` status set with a conditional `UPDATE`). |
+| OBS-07 | PDF text outside Latin-1 (for example Devanagari names) prints as "?". | Needs an embedded Unicode font; listed in DEVIATIONS.md §7. The web UI shows such names correctly. |
+| OBS-08 | Raising the sum insured by endorsement is not re-underwritten. | Matches SRS F-012 (endorsement with audit trail); large increases could be routed to the underwriter in a later sprint. |
+| OBS-09 | The Payments page lists charges but not refunds. | Refunds appear on the policy's cancellation summary and in the audit log; a refunds list is a small follow-up. |
+| OBS-10 | Before this cycle, `GET /payments` returned an empty list for agents. | Improvement, not logged as a defect: agents now see their portfolio's payments, the same rule as policies (TC-Pay-07). |
 
 ## 4. Defect metrics (STP §14)
 
 | Metric | Value |
 | --- | --- |
-| Defects found this cycle | 7 (High 1, Medium 4, Low 2) |
-| Defects fixed and verified | 7 |
+| Defects found this cycle | 14 (High 3, Medium 7, Low 4): DEF-01..07 by the QA Lead, DEF-08..14 by the Developer Lead |
+| Defects fixed and verified | 14 |
 | Open defects | 0 (0 critical) |
 | Defect aging | All fixed on the day they were found (17-11-2026) |
-| Defect density | QA Lead's modules: 3 defects in 489 lines ≈ 6.1 per KLOC. All modules touched: 7 defects in 1,295 lines (claims, fraud, settlement, notifications, util, quotes, customers, policies, admin) ≈ 5.4 per KLOC |
-| Regression | Full suite re-run after every fix: 122 / 122 passing at the end of the cycle |
+| Defect density | QA Lead's modules: 3 defects in 489 lines ≈ 6.1 per KLOC. All modules touched by DEF-01..07: 7 defects in 1,295 lines ≈ 5.4 per KLOC. Developer Lead's modules (policies, payments, documents, pdf, web UI): 8 defects (DEF-06, DEF-08..14) in 1,458 lines ≈ 5.5 per KLOC |
+| Regression | Full suite re-run after every fix: 122 / 122 passing at the end of the QA cycle; 154 / 154 at the end of the Developer Lead cycle |
