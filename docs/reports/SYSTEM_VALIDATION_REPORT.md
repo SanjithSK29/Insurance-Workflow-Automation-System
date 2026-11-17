@@ -6,7 +6,7 @@
 | Report | System Validation Report (Deliverables Part-3, item 2.b.ii) |
 | Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241 |
 | Validated against | SRS v1.0 (FR, NFR, security requirements), STP v1.0 §3, §5, §5.1 |
-| Build under test | `main` at `b4c18dd` (after PR #8) plus the new tests on branch `vishal-test-updates` |
+| Build under test | Branch `vishal-qa-hardening` (= `main` at `b4c18dd` + PR #9 + PR #10, including the three defect fixes) |
 | Executed on | 17-11-2026 |
 | Verdict | **Accepted for demo.** All high-priority functional and security requirements pass. Three non-functional checks need a deployed environment and remain open for UAT (section 6). |
 
@@ -40,13 +40,13 @@ Unit tests show that each module works. This report answers the system-level que
 | IWA-F-012 | Endorsement with audit trail | TC-Endorse-01 | P |
 | IWA-F-013 | Invoice PDF with tax breakup | TC-Invoice-01 | P |
 | IWA-F-014 | Cancellation with pro-rata refund | TC-Cancel-01/02; TC-Claim-04 shows a cancelled policy accepts no claims | P |
-| IWA-F-020 | Claim registration with document upload (10 MB) | TC-Claim-01..10: claim ID returned, 10 MB limit (413), type sniffing, ownership (403), dates, policy status, role-scoped listing, extra documents | P |
-| IWA-F-021 | Configurable multi-level BPMN approval | TC-WF-01..03: ≤ 100,000 adjuster only; > 100,000 adds senior step; new workflow version changes routing; wrong role cannot act | P |
+| IWA-F-020 | Claim registration with document upload (10 MB) | TC-Claim-01..11: claim ID returned, 10 MB limit (413), type sniffing, ownership (403), real calendar dates only, policy status, role-scoped listing, extra documents; TC-Contract-01..05: the SAD §4.3.2 API and §4.4 error envelope | P |
+| IWA-F-021 | Configurable multi-level BPMN approval | TC-WF-01..03: ≤ 100,000 adjuster only; > 100,000 adds senior step; new workflow version changes routing; wrong role cannot act; TC-Sec-Claim-07: approved amount must be a real number | P |
 | IWA-F-022 | Automated fraud detection | TC-Fraud-01 (end to end: duplicate routed to fraud investigation with audit entry), TC-Fraud-02..11 (every rule), TC-Settle-09 (second claim over remaining cover routed to investigation) | P |
-| IWA-F-023 | Settlement per policy terms | TC-Settle-01 (end to end with signed settlement letter), TC-Settle-02..09 | P |
-| IWA-F-024 | Notify claimant at every status change | TC-Notify-01 (REGISTERED → UNDER_REVIEW → APPROVED → SETTLED, in-app and email), TC-Notify-02..09 | P |
+| IWA-F-023 | Settlement per policy terms | TC-Settle-01 (end to end with signed settlement letter), TC-Settle-02..09, TC-Settle-10 (the letter states the deductible, co-pay and amount paid) | P |
+| IWA-F-024 | Notify claimant at every status change | TC-Notify-01 (REGISTERED → UNDER_REVIEW → APPROVED → SETTLED, in-app and email), TC-Notify-02..12, TC-Track-01..05 ("Track Claim Status" use case: timeline, message content, rejection, adjuster alerts) | P |
 | IWA-F-030 | Admin designs and deploys BPMN | TC-Admin-01, TC-WF-02 | P |
-| IWA-F-031 | RBAC for all modules | TC-RBAC-01 (every module), TC-Claim-07/08, TC-WF-03, TC-Settle-08, TC-Notify-09 | P |
+| IWA-F-031 | RBAC for all modules | TC-RBAC-01 (every module), TC-Sec-Claim-01 (30-check claims RBAC matrix), TC-Sec-Claim-02, TC-Claim-07/08, TC-WF-03, TC-Settle-08/13, TC-Notify-09 | P |
 | IWA-F-032 | Dashboards load in under 3 s | TC-Dash-01, TC-Renewal-Report-03 | P |
 | IWA-F-033 | CSV and PDF report export | TC-Report-01, TC-Renewal-Report-01/02 | P |
 | IWA-F-034 | Immutable audit log | TC-Audit-01: append-only, tampering detected | P |
@@ -55,8 +55,8 @@ Unit tests show that each module works. This report answers the system-level que
 
 | Req ID | Requirement | Evidence | Result |
 | --- | --- | --- | --- |
-| IWA-NF-001 | p95 ≤ 2 s for quote and claim-status APIs | TC-Perf-01: 400 requests in-process, p95 well under 2 s (whole test took 0.54 s). A k6 run against a deployed environment (`perf/quote-load.js`) is still to do. | P (in-process) / M |
-| IWA-NF-002 | 99.9 % availability | Health endpoint UP on the running server; CI checks health after `npm start` and in Docker. Real uptime needs production monitoring. | M |
+| IWA-NF-001 | p95 ≤ 2 s for quote and claim-status APIs | TC-Perf-01: 400 requests in-process, p95 well under 2 s. The k6 script `perf/quote-load.js` now loads both the quote and the claim-status API with a separate p95 threshold each; running it needs a deployed environment. | P (in-process) / M |
+| IWA-NF-002 | 99.9 % availability | Health endpoint UP on the running server; CI checks health after `npm start` and in Docker. DEF-01 (a notification error could crash the process) was found and fixed; TC-Notify-10..12 keep it fixed. Real uptime needs production monitoring. | M |
 | IWA-NF-003 | AES-256 at rest, TLS 1.2+ in transit | TC-Sec-01, TC-Sec-TLS-01 | P |
 | IWA-NF-004 | 7-year immutable audit retention | TC-Audit-01 proves immutability; retention period is an operations policy | P / M |
 | IWA-NF-005 | WCAG 2.1 AA | UI has labels, skip link, focus outlines and `aria-live` toasts; a formal axe/Lighthouse audit is still to do | M |
@@ -67,11 +67,11 @@ Unit tests show that each module works. This report answers the system-level que
 | --- | --- | --- |
 | IWA-SR-001 TLS 1.2+ | TC-Sec-TLS-01; HSTS header seen on the running server | P |
 | IWA-SR-002 MFA for admin and underwriter | TC-Sec-MFA-01/02, TC-Sec-Lock-01/02, TC-Sec-Revoke-01 | P |
-| IWA-SR-003 PII masked in logs and UI | TC-Sec-PII-01; TC-Claim-01/08 (fraud details hidden from customers and agents) | P |
+| IWA-SR-003 PII masked in logs and UI | TC-Sec-PII-01; TC-Claim-01/08, TC-Sec-Claim-03 (fraud details hidden from customers and agents) | P |
 | IWA-SR-004 Rate limiting | TC-Sec-RL-01 | P |
-| IWA-SR-005 Signed documents | TC-Sec-Sign-01, TC-Policy-01, TC-Settle-01 | P |
-| §5.1 RBAC bypass attempts | TC-RBAC-01, TC-Claim-07, TC-WF-03, TC-Settle-08, TC-Notify-09 | P |
-| §5.1 Fuzzing of claim/quote inputs | TC-Quote-02, TC-Claim-02, TC-Claim-03, TC-Claim-05, TC-WF-03, TC-Sec-Trace-01 | P |
+| IWA-SR-005 Signed documents | TC-Sec-Sign-01, TC-Policy-01, TC-Settle-01; TC-Settle-11 (settlement letter verifies with only the public key), TC-Settle-12 (changing the amount paid breaks the signature) | P |
+| §5.1 RBAC bypass attempts | TC-RBAC-01, TC-Sec-Claim-01/02 (role matrix, forged and unsigned JWTs), TC-Claim-07, TC-WF-03, TC-Settle-08, TC-Notify-09 | P |
+| §5.1 Fuzzing of claim/quote inputs | TC-Quote-02, TC-Claim-02/03/05, TC-WF-03, TC-Sec-Trace-01, TC-Contract-05 (malformed JSON), TC-Sec-Claim-04 (SQL/script injection), TC-Sec-Claim-05 (path traversal), TC-Sec-Claim-06/07 (coerced amounts, DEF-03), TC-Date-02 (impossible dates, DEF-02) | P |
 | §5.1 Penetration testing (auth, workflow APIs) | Lockout, token revocation, OTP replay and workflow role checks automated; a full OWASP ZAP scan is still to do | P / M |
 
 ## 4. End-to-end scenarios
@@ -88,6 +88,8 @@ These cross-module flows were run automatically through the HTTP API.
 | E2E-6 | First claim uses most of the cover; second claim is flagged, investigated, then capped at the remaining cover | claims, fraud, workflow, settlement | TC-Settle-09 | P |
 | E2E-7 | Agent onboards a customer, buys a policy and files a claim for them | customers, quotes, underwriting, payments, claims | TC-Claim-08 | P |
 | E2E-8 | Customer cancels a policy, gets a pro-rata refund, and can no longer claim | policies, payments, claims | TC-Cancel-01, TC-Claim-04 | P |
+| E2E-9 | A claim is registered, approved and settled while the notification service is failing; nothing crashes and every failure is logged | claims, workflow, settlement, payments, notifications | TC-Notify-12 | P |
+| E2E-10 | Customer follows a claim from filing to payout: timeline, in-app and email messages with the amount, then downloads and independently verifies the signed settlement letter | claims, workflow, notifications, documents | TC-Track-01/02/05, TC-Settle-10/11 | P |
 
 ## 5. Smoke test on the running server (17-11-2026)
 
@@ -105,7 +107,8 @@ Server started with `PORT=3999 SEED_DEMO=true node src/server.js`:
 
 | Item | Requirement | Plan |
 | --- | --- | --- |
-| Load test with k6 against a deployed environment | NF-001 | Run `perf/quote-load.js` before the demo if a deployed environment is available |
+| Load test with k6 against a deployed environment | NF-001 | `perf/quote-load.js` is ready (quote and claim status); run it when a deployed environment is available |
+| Persist the data keys in deployments | NF-002, DEF-01 root cause | Deployment owner to require `DATA_KEY` when the database is on a volume (see the defect log) |
 | Availability monitoring | NF-002 | Needs production hosting; out of scope for the course demo |
 | Accessibility audit (axe / Lighthouse) | NF-005 | Manual audit during UAT |
 | OWASP ZAP scan | STP §5.1 | Run against the Docker image during UAT |
@@ -123,7 +126,8 @@ As the FAQ allows, these are documented for the demo:
 | JUnit/Jest, Selenium/Playwright, Postman | `node:test` API tests over real HTTP | Same coverage of the API; the web UI has no automated tests (it calls the same tested API) |
 | Jira for defects | GitHub pull requests and reviews | Course instruction |
 | Test execution 02–06 Nov 2026 | 17 Nov 2026 | Late; executed on the latest `main`, which includes all merged work (PRs #6–#8) |
+| SAD §4.3.2 claim response `status: REGISTERED`, field `docs` | `UNDER_REVIEW`, field `documents` with file content | See [DEVIATIONS.md](../DEVIATIONS.md) §1; REGISTERED is still the first timeline entry |
 
 ## 8. Conclusion
 
-All 18 functional requirements and all 5 security requirements in the RTM pass at system level. NF-001 and NF-003 pass, and NF-004 passes for immutability. NF-002, NF-005 and the full NF-001 load test need a deployed environment and are scheduled for UAT. The STP exit criteria are met: 100 % of planned automated tests executed (86/86), 0 critical defects open, and all high-priority acceptance criteria met.
+All 18 functional requirements and all 5 security requirements in the RTM pass at system level. NF-001 and NF-003 pass, and NF-004 passes for immutability. NF-002, NF-005 and the full NF-001 load test need a deployed environment and are scheduled for UAT. Validation found three defects in the claims area (DEF-01 High, DEF-02 Medium, DEF-03 Low); all three were fixed and re-tested in the same cycle. The STP exit criteria are met: 100 % of planned automated tests executed (114/114 passed), 0 critical or open defects, and all high-priority acceptance criteria met.
