@@ -4,10 +4,21 @@
 | --- | --- |
 | Project | Insurance Workflow Automation System (IWAS) |
 | Covers | Course Deliverables Part-2 (backlog, story points, Sprint 1, Sprint 2) and the Part-3 spill-over |
-| Recorded | 17-11-2026, after the sprints. The plan below was written down from `docs/WORK_SPLIT.md` and the SRS; delivery dates and PRs come from the git history. |
+| Recorded | 17-11-2026, after the sprints, by the QA Lead. Not a plan made at the time; see "What is real and what is estimated" below. |
 | Board | GitHub Project "IWAS Backlog" linked to this repository |
 
-> **Honest note.** The team did not keep a GitHub Project board or story points during the sprint weeks. This document and the board record the plan and estimates afterwards, and compare them with what was actually delivered and when. Nothing here is backdated.
+> **Honest note.** The team did not keep a GitHub Project board, story points or a written sprint plan during the sprint weeks. This document reconstructs one afterwards so the work can be discussed in sprint terms, and compares it with what was actually delivered and when. Nothing here is backdated.
+
+**What is real and what is estimated**
+
+| Column / section | Source | Real or estimated |
+| --- | --- | --- |
+| Item, Requirement | SRS v1.0 and the RTM | Real |
+| Owner | `docs/WORK_SPLIT.md` (module ownership agreed by the team) | Real |
+| Delivered in, Date | git history and GitHub PRs | Real |
+| Sprint allocation (which sprint an item sits in) | Grouped by the QA Lead on 17-11-2026 by dependency: buying a policy and filing a claim first, approval/settlement/admin second | **Estimated** |
+| SP (story points) | Assigned by the QA Lead on 17-11-2026 by relative size of the delivered code | **Estimated**, open for the team to correct in PR review |
+| Blockers, retrospective | What the git history shows | Real |
 
 ## 1. Team and roles
 
@@ -20,9 +31,9 @@
 
 ## 2. Estimation
 
-Story points use the Fibonacci scale (1, 2, 3, 5, 8). They estimate relative effort and uncertainty, not hours: 1 = a small, well-understood change; 8 = a large piece with unknowns (e.g. a BPMN engine). Owners follow WORK_SPLIT.
+Story points use the Fibonacci scale (1, 2, 3, 5, 8). They estimate relative effort and uncertainty, not hours: 1 = a small, well-understood change; 8 = a large piece with unknowns (e.g. a BPMN engine). Because they were assigned after the work was done, they reflect the size of the delivered code rather than an up-front forecast.
 
-## 3. Sprint backlog: plan vs actual
+## 3. Sprint backlog: reconstructed plan vs actual delivery
 
 ### Sprint 1: 19–23 Oct 2026 (goal: buy a policy end to end, file a claim)
 
@@ -84,7 +95,7 @@ Story points use the Fibonacci scale (1, 2, 3, 5, 8). They estimate relative eff
 | Sampreeth | 10 | 12 | 7 | 29 |
 | **Team** | **35** | **50** | **25** | **110** |
 
-Planned velocity was 35 (Sprint 1) and 50 (Sprint 2). **Actual velocity committed to the repository inside the sprint windows was 0**, apart from the CI pipeline (2 SP, done early on 10 Oct): the Sprint 1 and Sprint 2 items were not committed during the sprints and were integrated together on 01-11-2026 in PR #5.
+Estimated scope was 35 SP for Sprint 1 and 50 SP for Sprint 2. **Actual velocity committed to the repository inside the sprint windows was 0**, apart from the CI pipeline (2 SP, done early on 10 Oct): the Sprint 1 and Sprint 2 items were not committed during the sprints and were integrated together on 01-11-2026 in PR #5.
 
 ## 5. What went wrong (blockers)
 
