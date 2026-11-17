@@ -2,19 +2,19 @@
 
 This matrix updates SRS §8 and STP §13 with the implementation and test results.
 Status: **P** = passed, **A** = automated check in CI, **M** = manual / environment-dependent verification.
-Last run (17-11-2026): `npm test` on Node.js 25.2.0 (Windows 11): **114 tests, 114 passed, 0 failed**. CI re-runs the suite on Node.js 22 for every push and pull request.
-Coverage (`npm run test:coverage`, c8 with `--all`): **94.3 % statements, 80.98 % branches, 93.53 % functions, 94.3 % lines**; CI fails below 93 / 80 / 92 / 93. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md). Defects: [Defect Log](reports/DEFECT_LOG.md). Deviations: [DEVIATIONS.md](DEVIATIONS.md).
+Last run (17-11-2026): `npm test` on Node.js 25.2.0 (Windows 11): **122 tests, 122 passed, 0 failed**. CI re-runs the suite on Node.js 22 for every push and pull request.
+Coverage (`npm run test:coverage`, c8 with `--all`): **94.68 % statements, 82.18 % branches, 93.53 % functions, 94.68 % lines**; CI fails below 93 / 80 / 92 / 93. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md). Defects: [Defect Log](reports/DEFECT_LOG.md). Deviations: [DEVIATIONS.md](DEVIATIONS.md).
 
 ## Functional requirements
 
 | Req ID | Requirement | Module / code | Test case(s) | Test file | Status |
 | --- | --- | --- | --- | --- | --- |
-| IWA-F-001 | Personalised quote within 10 s | `src/modules/quotes.js` | TC-Quote-01, TC-Quote-02 | quote-underwriting.test.js | P |
-| IWA-F-002 | Risk score 0–100; high risk flagged for manual review | `src/modules/underwriting.js` | TC-UW-01 (×2), threshold config | quote-underwriting.test.js | P |
-| IWA-F-003 | KYC verified before issuance | `src/modules/customers.js`, `payments.js` | TC-KYC-01, manual-queue fallback | quote-underwriting.test.js | P |
+| IWA-F-001 | Personalised quote within 10 s | `src/modules/quotes.js` | TC-Quote-01, TC-Quote-02, TC-Quote-06/07 (numeric input, DEF-04) | quote-underwriting, numeric-input | P |
+| IWA-F-002 | Risk score 0–100; high risk flagged for manual review | `src/modules/underwriting.js` | TC-UW-01 (×2), threshold config, TC-Admin-02 (threshold input, DEF-07) | quote-underwriting, numeric-input | P |
+| IWA-F-003 | KYC verified before issuance | `src/modules/customers.js`, `payments.js` | TC-KYC-01, manual-queue fallback, TC-KYC-03/04 (income input, DEF-05) | quote-underwriting, numeric-input | P |
 | IWA-F-010 | Signed digital policy PDF after payment | `src/modules/policies.js`, `documents.js`, `pdf.js` | TC-Policy-01, TC-Policy-02 | policy.test.js | P |
 | IWA-F-011 | Renewal with reminders at 30/15/7 days | `policies.js` (`runRenewalReminders`), `server.js` scheduler | TC-Renew-01, renewal payment | policy.test.js | P |
-| IWA-F-012 | Endorsement with audit trail | `policies.js` (`endorse`) | TC-Endorse-01 | policy.test.js | P |
+| IWA-F-012 | Endorsement with audit trail | `policies.js` (`endorse`) | TC-Endorse-01, TC-Endorse-02 (sum insured input, DEF-06) | policy, numeric-input | P |
 | IWA-F-013 | Invoice PDF with tax breakup | `payments.js` (`generateInvoice`) | TC-Invoice-01 | policy.test.js | P |
 | IWA-F-014 | Policy cancellation with pro-rata refund | `policies.js` (`cancel`), `payments.js` (`refund`), `documents.js` (cancellation letter) | TC-Cancel-01, TC-Cancel-02 | policy-cancellation.test.js | P |
 | IWA-F-020 | Claim registration with document upload (10 MB) | `src/modules/claims.js` | TC-Claim-01 – TC-Claim-11, TC-Contract-01 – 05, TC-Date-01 – 03, TC-Sec-Claim-04 – 06 | claims-workflow, claims-edge-cases, claims-contract, date-validation, claims-security | P |
@@ -57,6 +57,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **94.3 % statements, 80.98 
 | Notification channel selection, provider outage and retry, role broadcast, inbox | notifications.test.js |
 | SAD §4.4 error envelope and trace ids on every claims error | claims-contract.test.js |
 | STP §5.1 injection and path-traversal fuzzing on claim inputs | claims-security.test.js |
+| Shared numeric input rule `parseNumber()` (DEF-03..07) | numeric-input.test.js |
 | Coverage gate (statements 93 %, branches 80 %, functions 92 %, lines 93 %) | `.c8rc.json`, CI job "Coverage report (c8)" |
 
 ## Clarified behaviour found during testing
@@ -71,7 +72,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **94.3 % statements, 80.98 
 
 | Criterion (STP §5) | Result |
 | --- | --- |
-| 100 % of planned automated test cases executed | 114 / 114 executed, 114 passed |
-| 0 critical defects open | 0 open (3 found this cycle: 1 High, 1 Medium, 1 Low; all fixed and re-tested) |
+| 100 % of planned automated test cases executed | 122 / 122 executed, 122 passed |
+| 0 critical defects open | 0 open (7 found this cycle: 1 High, 4 Medium, 2 Low; all fixed and re-tested) |
 | All high-priority acceptance criteria met | All high-priority F- and SR- requirements are P |
 | Items that need a deployed environment | NF-002 uptime, NF-005 accessibility audit, k6 load test, OWASP ZAP scan: planned for UAT |
