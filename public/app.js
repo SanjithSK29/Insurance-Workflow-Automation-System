@@ -123,7 +123,12 @@
   const card = (title, ...content) => h('section', { class: 'card' }, title ? h('h2', {}, title) : null, ...content);
 
   // ---------- auth ----------
-  function logout() {
+  // `revoke` asks the server to revoke the token (DEF-14), so a copied token
+  // stops working too. Not needed when the server already rejected it (401).
+  async function logout({ revoke = false } = {}) {
+    if (revoke && state.token) {
+      try { await api('POST', '/auth/logout'); } catch { /* still sign out locally */ }
+    }
     state.token = null; state.me = null;
     sessionStorage.removeItem('iwas.token');
     render();
@@ -610,7 +615,7 @@
     const id = location.hash.slice(1);
     if (state.me && id && id !== state.view) go(id);
   });
-  document.getElementById('logout').addEventListener('click', logout);
+  document.getElementById('logout').addEventListener('click', () => logout({ revoke: true }));
   const langSel = document.getElementById('lang');
   langSel.value = lang;
   langSel.addEventListener('change', () => { lang = langSel.value; safeSet('iwas.lang', lang); document.documentElement.lang = lang; render(); });
