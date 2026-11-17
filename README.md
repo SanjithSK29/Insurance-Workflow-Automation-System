@@ -2,7 +2,7 @@
 
 A working implementation of the insurance platform specified in this repository's SRS, SAD and STP. It covers customer onboarding, quotes, underwriting, policies and claims settlement, with BPMN-driven approval workflows, role-based dashboards and an immutable audit trail.
 
-> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **86 tests, 86 passing** (`npm test`), 94.15 % statement and 80.07 % branch coverage. Test reports (unit, system validation, code coverage, branch coverage) are in [docs/reports](docs/reports/). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
+> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **114 tests, 114 passing** (`npm test`), 94.3 % statement and 80.98 % branch coverage, enforced in CI. Test reports (unit, system validation, code coverage, branch coverage, test summary, defect log) are in [docs/reports](docs/reports/). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
 
 ## Quick start
 
@@ -141,9 +141,11 @@ The `security` job in the CI pipeline runs `npm audit` (fails on high or critica
 ├── Dockerfile
 ├── docs/
 │   ├── TRACEABILITY.md                     RTM: requirement → module → test → status
+│   ├── STP_v1.1.md                         Test plan, updated after the sprints
 │   ├── TEST_CASES.md                       Test Case Document (updated after the sprints)
+│   ├── DEVIATIONS.md                       Claims and testing deviations from the SRS, SAD and STP
 │   ├── WORK_SPLIT.md                       Team responsibilities
-│   └── reports/                            Unit, system validation, code and branch coverage reports
+│   └── reports/                            Part-3 test reports, test summary, defect log
 ├── perf/quote-load.js                      k6 load script (TC-Perf-01 against a deployed env)
 ├── public/                                 Web UI (index.html, app.js, styles.css)
 ├── scripts/otp.js                          Prints TOTP codes for demo MFA accounts
