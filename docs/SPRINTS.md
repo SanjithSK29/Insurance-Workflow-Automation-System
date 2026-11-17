@@ -5,7 +5,7 @@
 | Project | Insurance Workflow Automation System (IWAS) |
 | Covers | Course Deliverables Part-2 (backlog, story points, Sprint 1, Sprint 2) and the Part-3 spill-over |
 | Recorded | 17-11-2026, after the sprints, by the QA Lead. Not a plan made at the time; see "What is real and what is estimated" below. |
-| Board | GitHub Project "IWAS Backlog": https://github.com/users/vxs01/projects/1 (same 32 items, story points, sprints, owners and delivering PRs as the tables below). It is owned by the QA Lead's account; GitHub links a project only to repositories with the same owner, so it is linked from this document. |
+| Board | GitHub Project "IWAS Backlog": https://github.com/users/vxs01/projects/1 (same 32 items, story points, sprints, owners and delivering PRs as the tables below). It is owned by the QA Lead's account; GitHub links a project only to repositories with the same owner, so it is linked from this document. The Developer Lead's five Sprint 3 rows (added 17-11-2026) are not on the board yet. |
 
 > **Honest note.** The team did not keep a GitHub Project board, story points or a written sprint plan during the sprint weeks. This document reconstructs one afterwards so the work can be discussed in sprint terms, and compares it with what was actually delivered and when. Nothing here is backdated.
 
@@ -17,7 +17,7 @@
 | Owner | `docs/WORK_SPLIT.md` (module ownership agreed by the team) | Real |
 | Delivered in, Date | git history and GitHub PRs | Real |
 | Sprint allocation (which sprint an item sits in) | Grouped by the QA Lead on 17-11-2026 by dependency: buying a policy and filing a claim first, approval/settlement/admin second | **Estimated** |
-| SP (story points) | Assigned by the QA Lead on 17-11-2026 by relative size of the delivered code | **Estimated**, open for the team to correct in PR review |
+| SP (story points) | Assigned by the QA Lead on 17-11-2026 by relative size of the delivered code; the Developer Lead's Sprint 3 rows sized the same way by Samarth | **Estimated**, open for the team to correct in PR review |
 | Blockers, retrospective | What the git history shows | Real |
 
 ## 1. Team and roles
@@ -85,17 +85,22 @@ Story points use the Fibonacci scale (1, 2, 3, 5, 8). They estimate relative eff
 | Policy cancellation with pro-rata refund (new) | IWA-F-014 | Sanjith | 3 | PR #8 | 11-11-2026 |
 | Test execution, coverage, Part-3 reports | STP | Vishal | 8 | PR #9, #10 | 17-11-2026 |
 | Defect fixes DEF-01..07 | STP §8 | Vishal | 5 | PR #10, #11 | 17-11-2026 |
-| **Total** | | | **25** | | |
+| Payment and endorsement defects DEF-08..11: one payment at a time, endorsements charged/refunded, refunds per paid period | IWA-F-010, F-012, F-014 | Samarth | 5 | `samarth-dev-hardening` | 17-11-2026 |
+| Documents: accented names in PDFs (DEF-12), edge-case and access-rule tests | IWA-F-010, F-013, SR-005 | Samarth | 2 | `samarth-dev-hardening` | 17-11-2026 |
+| Web UI for cancellation, paid endorsements, payment history, renewals report and metrics | SRS 3.1, IWA-F-014, F-032/033 | Samarth | 3 | `samarth-dev-hardening` | 17-11-2026 |
+| Automated WCAG checks, contrast fixes (DEF-13), logout revocation from the UI (DEF-14) | IWA-NF-005, SR-002 | Samarth | 3 | `samarth-dev-hardening` | 17-11-2026 |
+| Code review of PRs #6–#13 | STP §9 | Samarth | 1 | `samarth-dev-hardening` | 17-11-2026 |
+| **Total** | | | **39** | | |
 
 ## 4. Velocity and load
 
 | Member | Sprint 1 SP | Sprint 2 SP | Sprint 3 SP | Total |
 | --- | --- | --- | --- | --- |
 | Sanjith | 13 | 11 | 5 | 29 |
-| Samarth | 7 | 14 | 0 | 21 |
+| Samarth | 7 | 14 | 14 | 35 |
 | Vishal | 5 | 13 | 13 | 31 |
 | Sampreeth | 10 | 12 | 7 | 29 |
-| **Team** | **35** | **50** | **25** | **110** |
+| **Team** | **35** | **50** | **39** | **124** |
 
 Estimated scope was 35 SP for Sprint 1 and 50 SP for Sprint 2. **Actual velocity committed to the repository inside the sprint windows was 0**, apart from the CI pipeline (2 SP, done early on 10 Oct): the Sprint 1 and Sprint 2 items were not committed during the sprints and were integrated together on 01-11-2026 in PR #5.
 
@@ -112,7 +117,7 @@ Estimated scope was 35 SP for Sprint 1 and 50 SP for Sprint 2. **Actual velocity
 
 - All 18 functional, 5 non-functional and 5 security requirements were implemented and are traced to tests ([TRACEABILITY.md](TRACEABILITY.md)).
 - After 1 Nov the team worked in small feature branches with CI on every PR (#6–#11).
-- Testing in Sprint 3 found 7 defects, each reproduced with a test and fixed, and raised branch coverage from 75.5 % to over 80 %.
+- Testing in Sprint 3 found 14 defects (DEF-01..07 by the QA Lead, DEF-08..14 by the Developer Lead), each reproduced with a test and fixed, and raised branch coverage from 75.5 % to 85.6 %.
 
 ## 7. Retrospective: what we would do differently
 
