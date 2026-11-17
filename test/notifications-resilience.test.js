@@ -52,4 +52,44 @@ describe('Notification resilience (DEF-01)', () => {
       process.off('unhandledRejection', onUnhandled);
     }
   });
+
+  test('TC-Notify-12: a claim goes through its whole lifecycle even if the notification service throws', async () => {
+    const c = await t.newCustomer('dr3');
+    const { policy } = await t.buyPolicy(c);
+    const notifications = t.ctx.services.notifications;
+    const original = notifications.notifyCustomer;
+    const errors = [];
+    const originalError = t.ctx.logger.error;
+    t.ctx.logger.error = (event, data) => errors.push({ event, ...data });
+    const unhandled = [];
+    const onUnhandled = (err) => unhandled.push(err);
+    process.on('unhandledRejection', onUnhandled);
+    // Simulate both failure styles: a synchronous throw and a rejected promise.
+    let calls = 0;
+    notifications.notifyCustomer = (...args) => {
+      calls++;
+      if (calls % 2) throw new Error('notification DB locked');
+      return Promise.reject(new Error('notification queue down'));
+    };
+    try {
+      const filed = await t.call('POST', '/claims', {
+        token: c.token,
+        body: { policyId: policy.policyId, claimType: 'hospitalization', amount: 15000, incidentDate: today(), documents: [pdfDoc()] },
+      });
+      assert.equal(filed.status, 201);
+      const approved = await t.call('POST', `/claims/${filed.body.claimId}/decision`, { token: t.tokens.ADJUSTER, body: { outcome: 'approve' } });
+      assert.equal(approved.body.claim.status, 'APPROVED');
+      const settled = await t.call('POST', `/claims/${filed.body.claimId}/settle`, { token: t.tokens.ADJUSTER });
+      assert.equal(settled.status, 200);
+      assert.equal(settled.body.status, 'SETTLED');
+      await new Promise((r) => setTimeout(r, 50));
+      assert.deepEqual(unhandled, []);
+      assert.ok(calls >= 4, 'registered, under review, approved and settled were all attempted');
+      assert.ok(errors.filter((e) => e.event === 'claim_notification_failed').length >= 4, 'each failure is logged');
+    } finally {
+      notifications.notifyCustomer = original;
+      t.ctx.logger.error = originalError;
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
 });

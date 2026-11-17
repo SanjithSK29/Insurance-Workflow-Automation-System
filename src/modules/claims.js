@@ -33,6 +33,14 @@ const STATUS_MESSAGES = {
 module.exports = function claimsModule(ctx) {
   const { db, config, audit, bus } = ctx;
 
+  // Claimant notifications are fire-and-forget: a claim must not fail, and the
+  // process must not crash, because a notification could not be sent.
+  const notifyClaimant = (customerId, type, message) => {
+    Promise.resolve()
+      .then(() => ctx.services.notifications.notifyCustomer(customerId, type, message))
+      .catch((err) => ctx.logger.error('claim_notification_failed', { customerId, type, error: err.message }));
+  };
+
   function decodeDocuments(docs = []) {
     if (!Array.isArray(docs)) throw badRequest('documents must be an array');
     if (docs.length > MAX_DOCS) throw badRequest(`At most ${MAX_DOCS} documents per request`);
@@ -66,7 +74,7 @@ module.exports = function claimsModule(ctx) {
       status, settlement ? JSON.stringify(settlement) : null, nowIso(), claimId);
     const claim = db.get('SELECT * FROM claims WHERE id = ?', claimId);
     audit.record('claims-service', 'CLAIM_' + status, 'claim', claimId, settlement ? { payable: settlement.payableAmount } : {});
-    ctx.services.notifications.notifyCustomer(claim.customer_id, 'CLAIM_' + status, STATUS_MESSAGES[status](claim, settlement));
+    notifyClaimant(claim.customer_id, 'CLAIM_' + status, STATUS_MESSAGES[status](claim, settlement));
     bus.publish('claim.status_changed', { claimId, status });
     return claim;
   }
@@ -108,7 +116,7 @@ module.exports = function claimsModule(ctx) {
     });
     audit.record(user.id, 'CLAIM_REGISTERED', 'claim', claim.id, { policyId: policy.id, amount, fraudScore: fraud.score });
     if (fraud.flagged) audit.record('fraud-engine', 'FRAUD_FLAG_RAISED', 'claim', claim.id, { score: fraud.score, rules: fraud.flags.map((f) => f.code) });
-    ctx.services.notifications.notifyCustomer(policy.customer_id, 'CLAIM_REGISTERED', STATUS_MESSAGES.REGISTERED(claim));
+    notifyClaimant(policy.customer_id, 'CLAIM_REGISTERED', STATUS_MESSAGES.REGISTERED(claim));
 
     const wf = ctx.services.workflow.start(WORKFLOW_KEY, claim.id, {
       amount, claimType, coverageType: policy.coverage_type, fraudFlagged: fraud.flagged, fraudScore: fraud.score,
