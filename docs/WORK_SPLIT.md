@@ -33,9 +33,9 @@ How the IWAS implementation is divided among the four team members. Ownership fo
 - `public/` (`index.html`, `app.js`, `styles.css`): role-based web UI for customer, agent, underwriter, adjuster and admin, plus accessibility and English/Hindi labels
 - `src/seed.js`: demo data
 
-**Tests:** `test/policy.test.js` (TC-Policy-01/02, TC-Renew-01, TC-Endorse-01, TC-Invoice-01), PDF unit test
+**Tests:** `test/policy.test.js` (TC-Policy-01/02, TC-Renew-01, TC-Endorse-01, TC-Invoice-01), PDF unit test; Part-3: `test/payments-hardening.test.js`, `test/endorsement-cancellation.test.js`, `test/documents-pdf.test.js`, `test/policies-payments-edge-cases.test.js`, `test/ui-accessibility.test.js` (32 cases, DEF-08..14)
 
-**Docs:** SAD sequence diagrams (policy purchase), README "What it does" and "API overview"; code review for all pull requests (STP §9)
+**Docs:** SAD sequence diagrams (policy purchase), README "What it does" and "API overview"; code review for all pull requests (STP §9): [Code Review Log](reports/CODE_REVIEW_LOG.md); Part-3 [Developer Lead Report](reports/DEV_LEAD_REPORT.md); deviations for his area in [DEVIATIONS.md](DEVIATIONS.md) §7
 
 ## 3. Sakaray Vishal: QA Lead
 

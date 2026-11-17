@@ -7,7 +7,7 @@
 | Compared | SRS v1.0 (18-08-2025) §4.3, §7; SAD v1.0 (09-09-2025) §3.4, §4.2.2, §4.3.2, §4.6; STP v1.0 (31-08-2025) |
 | Why | The course FAQ allows deviations from the submitted documents if they are documented and explained at the demo. |
 
-Technology-stack differences that affect the whole system (Kafka, Camunda, PostgreSQL, S3, Spring Boot) are in [README.md, "Differences from the documented stack"](../README.md#differences-from-the-documented-stack). This page covers only the parts owned by the QA Lead.
+Technology-stack differences that affect the whole system (Kafka, Camunda, PostgreSQL, S3, Spring Boot) are in [README.md, "Differences from the documented stack"](../README.md#differences-from-the-documented-stack). Sections 1–6 cover the parts owned by the QA Lead; section 7 was added by the Developer Lead (Samarth A) for policies, payments, documents and the web UI.
 
 ## 1. Claims API (SAD §4.3.2)
 
@@ -77,3 +77,17 @@ The SRS says "based on policy terms" without the terms. Implemented per coverage
 | T7 | §7 Execution 08–20 Sep 2025 | Executed 17 Nov 2026 on the latest `main` | The STP dates came from the template; the course Part-3 window was 2–6 Nov 2026 and testing ran late |
 | T8 | §3 lists 9 features | All 18 functional, 5 non-functional and 5 security requirements in the RTM are tested | Scope grew with the sprints; see [TEST_CASES.md](TEST_CASES.md) §1 |
 | T9 | No coverage target | Coverage measured with c8 and enforced in CI (statements ≥ 93 %, branches ≥ 80 %) | Added so the Code and Branch Coverage Reports stay true after future changes |
+
+## 7. Policies, payments, documents and web UI (Developer Lead)
+
+| # | Document says | Implemented | Reason |
+| --- | --- | --- | --- |
+| P1 | SAD §3.4 Payment Service "Java + Razorpay SDK" | Gateway adapter with sandbox tokens (`tok_success`, `tok_decline`, `tok_flaky`) behind `charge` / `payout` / `refund` | No card data reaches IWAS (PCI-DSS scope); a real gateway client replaces the adapter only |
+| P2 | SAD §3.4 Document Service "Python + S3" | Node.js document store in the database with the same operations (store, fetch, verify) | Matches the single-language stack; S3 is a storage swap |
+| P3 | SRS F-012 endorsement "with audit trail" (premium not mentioned) | A higher sum insured is charged before it applies (402 PAYMENT_REQUIRED without a token); a lower one is refunded | Found as DEF-09: without it the extra cover was free |
+| P4 | Not specified | One payment at a time per application or policy (409 PAYMENT_IN_PROGRESS) | Found as DEF-08: double-submitted payments charged twice |
+| P5 | SRS F-014 cancellation "pro-rata refund" | Refund of the unused premium per paid period, including endorsement payments, less a configurable charge | Found as DEF-10: a single pro-rata over the whole span was wrong after renewals |
+| P6 | SAD §4.5 multi-language UI | Navigation and headings in English and Hindi; generated PDFs are in English and use the standard PDF fonts, so Devanagari text in PDFs prints as "?" | Embedding a Unicode font is a follow-up (OBS-07) |
+| P7 | STP §6 Selenium/Playwright for UI | jsdom + axe-core: every screen of every role rendered from the real app and checked against WCAG 2.0/2.1 A and AA; contrast computed from CSS tokens | Runs in CI without a browser; real-browser layout and a screen-reader pass remain for UAT |
+| P8 | SAD §4.5 "voice assistance" | Not built; the UI works with screen readers (labels, live regions, skip link) instead | Out of scope for this release |
+

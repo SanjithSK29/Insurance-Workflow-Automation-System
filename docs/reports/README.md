@@ -1,6 +1,6 @@
 # Test Reports (Deliverables Part-3)
 
-Testing according to the STP, executed on 17-11-2026 by Sakaray Vishal (QA Lead).
+Testing according to the STP, executed on 17-11-2026 by Sakaray Vishal (QA Lead), followed the same day by the Developer Lead's cycle for his modules (Samarth A). End of day: 154 / 154 tests passing, 14 defects found and fixed.
 
 | Report | Headline |
 | --- | --- |
@@ -9,7 +9,9 @@ Testing according to the STP, executed on 17-11-2026 by Sakaray Vishal (QA Lead)
 | [Code Coverage Report](CODE_COVERAGE_REPORT.md) | 94.68 % statements, 93.53 % functions, 94.68 % lines |
 | [Branch Coverage Report](BRANCH_COVERAGE_REPORT.md) | 82.18 % branches (932 / 1134), up from 75.52 % |
 | [Test Summary Report](TEST_SUMMARY_REPORT.md) | STP §8 summary: results, metrics, exit criteria |
-| [Defect Log](DEFECT_LOG.md) | 7 defects found (1 High, 4 Medium, 2 Low), all fixed and re-tested |
+| [Developer Lead Report](DEV_LEAD_REPORT.md) | Policies, payments, documents and web UI: 32 new cases, DEF-08..14 fixed, module branch coverage 92–95 %, 0 WCAG A/AA violations (Samarth) |
+| [Code Review Log](CODE_REVIEW_LOG.md) | Developer Lead's review of PRs #6–#13: verdicts, notes and follow-ups (Samarth) |
+| [Defect Log](DEFECT_LOG.md) | 14 defects found (3 High, 7 Medium, 4 Low), all fixed and re-tested: DEF-01..07 by the QA Lead, DEF-08..14 by the Developer Lead |
 
 Related: [Test Plan v1.1](../STP_v1.1.md) · [Test Case Document](../TEST_CASES.md) · [Requirements Traceability Matrix](../TRACEABILITY.md) · [Deviations](../DEVIATIONS.md) · raw output in [evidence/](evidence/)
 
