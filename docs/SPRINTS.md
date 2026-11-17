@@ -22,12 +22,14 @@
 
 ## 1. Team and roles
 
-| Member | Role | Owns (WORK_SPLIT) |
-| --- | --- | --- |
-| Sanjith Suresh Kumar | Project Lead | Quotes, underwriting, KYC, workflow engine, integration; repository owner |
-| Samarth A | Developer Lead | Policies, payments, documents/PDF, web UI; code review |
-| Sakaray Vishal | QA Lead | Claims, fraud, settlement, notifications; test plan, RTM, test reports |
-| Sampreeth Jaladi | DevOps / Security | Auth, MFA, RBAC, audit, encryption, dashboards/reports, CI/CD, Docker |
+| Member | GitHub account | Role | Owns (WORK_SPLIT) |
+| --- | --- | --- | --- |
+| Sanjith Suresh Kumar | `SanjithSK29` | Project Lead | Quotes, underwriting, KYC, workflow engine, integration; repository owner |
+| Samarth A | `samarth2006-28` | Developer Lead | Policies, payments, documents/PDF, web UI; code review |
+| Sakaray Vishal | `vxs01` | QA Lead | Claims, fraud, settlement, notifications; test plan, RTM, test reports |
+| Sampreeth Jaladi | `minkysponge-wq` | DevOps / Security | Auth, MFA, RBAC, audit, encryption, dashboards/reports, CI/CD, Docker |
+
+The GitHub account column maps commit and PR authors to people (e.g. PR #6 and its 7 commits are Sampreeth's, under `minkysponge-wq`).
 
 ## 2. Estimation
 
