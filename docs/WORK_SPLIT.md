@@ -48,7 +48,7 @@ How the IWAS implementation is divided among the four team members. Ownership fo
 **Tests**
 - `test/claims-workflow.test.js` (TC-Claim-01/02, TC-WF-01/02, TC-Fraud-01, TC-Settle-01, TC-Notify-01)
 - `test/fraud-settlement.test.js` (TC-Fraud-02..11, TC-Settle-02..07), `test/claims-edge-cases.test.js` (TC-Claim-03..10, TC-WF-03, TC-Settle-08/09), `test/notifications.test.js` (TC-Notify-02..09)
-- `test/notifications-resilience.test.js` (TC-Notify-10..12), `test/claims-contract.test.js` (TC-Contract-01..05), `test/date-validation.test.js` (TC-Date-01..03, TC-Claim-11), `test/claims-security.test.js` (TC-Sec-Claim-01..07), `test/settlement-letter.test.js` (TC-Settle-10..13), `test/claim-tracking.test.js` (TC-Track-01..05)
+- `test/notifications-resilience.test.js` (TC-Notify-10..12), `test/claims-contract.test.js` (TC-Contract-01..05), `test/date-validation.test.js` (TC-Date-01..03, TC-Claim-11), `test/claims-security.test.js` (TC-Sec-Claim-01..07), `test/settlement-letter.test.js` (TC-Settle-10..13), `test/claim-tracking.test.js` (TC-Track-01..05), `test/numeric-input.test.js` (TC-Num-01/02 and the DEF-04..07 tests in other modules)
 - `test/performance-unit.test.js` (TC-Perf-01) and `perf/quote-load.js` (k6: quote and claim status)
 - `test/helpers.js`: shared test harness
 - Coverage: `.c8rc.json` thresholds and the CI "Coverage report (c8)" job

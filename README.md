@@ -2,7 +2,7 @@
 
 A working implementation of the insurance platform specified in this repository's SRS, SAD and STP. It covers customer onboarding, quotes, underwriting, policies and claims settlement, with BPMN-driven approval workflows, role-based dashboards and an immutable audit trail.
 
-> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **114 tests, 114 passing** (`npm test`), 94.3 % statement and 80.98 % branch coverage, enforced in CI. Test reports (unit, system validation, code coverage, branch coverage, test summary, defect log) are in [docs/reports](docs/reports/). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
+> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **122 tests, 122 passing** (`npm test`), 94.68 % statement and 82.18 % branch coverage, enforced in CI. Test reports (unit, system validation, code coverage, branch coverage, test summary, defect log) are in [docs/reports](docs/reports/). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
 
 ## Quick start
 

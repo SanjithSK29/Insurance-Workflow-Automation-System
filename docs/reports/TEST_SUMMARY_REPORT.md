@@ -6,12 +6,12 @@
 | Report | Test Summary Report (STP §8 deliverable; IEEE 829 structure) |
 | Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241 |
 | Test cycle | Part-3 testing, executed 17-11-2026 (planned 02-11 to 06-11-2026) |
-| Build | Branch `vishal-qa-hardening` = `main` at `b4c18dd` + PR #9 + PR #10 |
+| Build | Branch `vishal-input-validation` = `main` at `b4c18dd` + PR #9 + PR #10 + PR #11 |
 | Recommendation | **Ready for demo / UAT.** Exit criteria met; three non-functional checks need a deployed environment. |
 
 ## 1. Summary
 
-All planned automated tests were executed and passed: **114 of 114**, in 16 test files. Testing found **3 defects** in the claims area: one High (the server could crash), one Medium and one Low. All three were reproduced with a failing test, fixed, and re-tested in the same cycle. Coverage is **94.3 % of statements and 80.98 % of branches**, and CI now fails any change that lowers it below 93 % / 80 %.
+All planned automated tests were executed and passed: **122 of 122**, in 17 test files. Testing found **7 defects**: three in the claims area (one High, where the server could crash; one Medium; one Low) and four of the same input-coercion kind in quotes, customer income, endorsements and the admin risk threshold. All were reproduced, fixed and re-tested in the same cycle. Coverage is **94.68 % of statements and 82.18 % of branches**, and CI now fails any change that lowers it below 93 % / 80 %.
 
 ## 2. Test items
 
@@ -43,15 +43,15 @@ Requirement coverage (functional + security): **23 / 23 = 100 %**. Traceability:
 
 | Metric | Value |
 | --- | --- |
-| Test cases planned (automated) | 114 |
-| Executed | 114 (100 %) |
-| Passed | 114 (100 %) |
+| Test cases planned (automated) | 122 |
+| Executed | 122 (100 %) |
+| Passed | 122 (100 %) |
 | Failed / blocked / skipped | 0 / 0 / 0 |
-| Automation coverage | 114 automated cases + 6 manual or environment checks; automated share 95 % |
-| Statement / branch / function coverage | 94.3 % / 80.98 % / 93.53 % |
-| QA Lead's modules (claims, fraud, settlement, notifications) | 100 % statements; branches 96.1 % / 100 % / 100 % / 100 % |
-| Defects found | 3 (High 1, Medium 1, Low 1) |
-| Defects fixed and verified | 3 |
+| Automation coverage | 122 automated cases + 6 manual or environment checks; automated share 95.3 % |
+| Statement / branch / function coverage | 94.68 % / 82.18 % / 93.53 % |
+| QA Lead's modules (claims, fraud, settlement, notifications) | 100 % statements; branches 96.55 % / 100 % / 100 % / 100 % |
+| Defects found | 7 (High 1, Medium 4, Low 2) |
+| Defects fixed and verified | 7 |
 | Defects open | 0 |
 | Defect aging | 0 days (all fixed on the day found) |
 
@@ -62,6 +62,10 @@ Requirement coverage (functional + security): **23 / 23 = 100 %**. Traceability:
 | DEF-01 | High | A notification error (unreadable encrypted contact details) became an unhandled promise rejection that would terminate the server | Fixed, verified |
 | DEF-02 | Medium | Impossible dates (2026-02-30) accepted as claim incident date and date of birth | Fixed, verified |
 | DEF-03 | Low | Claim and approved amounts accepted `true`, `[5]`, `"0x10"` via `Number()` coercion | Fixed, verified |
+| DEF-04 | Low | Quote inputs accepted coerced values (`income: "0x10000"` read as 65,536) | Fixed, verified |
+| DEF-05 | Medium | Customer income `true` stored as 1, blank/null as 0 | Fixed, verified |
+| DEF-06 | Medium | Endorsement `sumInsured: "0x10000"` cut cover to 65,536 and refunded premium | Fixed, verified |
+| DEF-07 | Medium | Admin risk threshold `true` stored as 1 | Fixed, verified |
 
 Steps to reproduce, root causes and fix commits: [DEFECT_LOG.md](DEFECT_LOG.md).
 
@@ -75,7 +79,7 @@ Steps to reproduce, root causes and fix commits: [DEFECT_LOG.md](DEFECT_LOG.md).
 
 | Criterion | Result |
 | --- | --- |
-| 100 % of planned test cases executed | Met: 114 / 114 |
+| 100 % of planned test cases executed | Met: 122 / 122 |
 | 0 critical defects open | Met: 0 open of any severity |
 | All acceptance criteria met | Met for all high-priority F and SR requirements; NF-002/NF-005 need a deployed environment |
 
@@ -86,6 +90,7 @@ Steps to reproduce, root causes and fix commits: [DEFECT_LOG.md](DEFECT_LOG.md).
 | Baseline run on latest `main` (51 tests, coverage) | 17-11-2026 | Vishal |
 | New tests for claims, fraud, settlement, notifications (PR #9) | 17-11-2026 | Vishal |
 | Contract, security, resilience, tracking tests; DEF-01..03 found and fixed; CI coverage job and gate (PR #10) | 17-11-2026 | Vishal |
+| Cross-module review of the other members' modules; DEF-04..07 fixed with a shared `parseNumber()` (PR #11) | 17-11-2026 | Vishal |
 | Smoke test of the running server | 17-11-2026 | Vishal |
 | Reports, RTM, test case document, defect log, deviations | 17-11-2026 | Vishal |
 | Code review and approval | pending | Samarth (Developer Lead) |
