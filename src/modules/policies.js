@@ -91,13 +91,15 @@ module.exports = function policiesModule(ctx) {
     if (daysLeft > RENEWAL_WINDOW_DAYS) throw conflict('TOO_EARLY', `Renewal opens ${RENEWAL_WINDOW_DAYS} days before expiry`);
     if (daysLeft < -30) throw conflict('LAPSED', 'Grace period of 30 days has passed; buy a new policy');
     const rq = renewalQuote(p);
-    const payment = await ctx.services.payments.charge({ purpose: 'RENEWAL', referenceId: p.id, policyId: p.id, total: rq.premium, token, actorId: user.id });
-    db.run("UPDATE policies SET end_date = ?, premium = ?, status = 'ACTIVE', version = version + 1 WHERE id = ?", rq.newEndDate, rq.premium, p.id);
-    const doc = renderPolicyPdf(p.id);
-    const invoice = ctx.services.payments.generateInvoice(payment.paymentId, { customerId: p.customer_id, policyNumber: p.policy_number, description: `Renewal premium until ${rq.newEndDate}` });
-    audit.record(user.id, 'POLICY_RENEWED', 'policy', p.id, { newEndDate: rq.newEndDate, paymentId: payment.paymentId });
-    ctx.services.notifications.notifyCustomer(p.customer_id, 'POLICY_RENEWED', `Policy ${p.policy_number} renewed until ${rq.newEndDate}.`);
-    return { policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)), payment, documentId: doc.id, invoiceDocumentId: invoice.id };
+    return ctx.services.payments.withPaymentLock(`policy:${p.id}`, async () => {
+      const payment = await ctx.services.payments.charge({ purpose: 'RENEWAL', referenceId: p.id, policyId: p.id, total: rq.premium, token, actorId: user.id });
+      db.run("UPDATE policies SET end_date = ?, premium = ?, status = 'ACTIVE', version = version + 1 WHERE id = ?", rq.newEndDate, rq.premium, p.id);
+      const doc = renderPolicyPdf(p.id);
+      const invoice = ctx.services.payments.generateInvoice(payment.paymentId, { customerId: p.customer_id, policyNumber: p.policy_number, description: `Renewal premium until ${rq.newEndDate}` });
+      audit.record(user.id, 'POLICY_RENEWED', 'policy', p.id, { newEndDate: rq.newEndDate, paymentId: payment.paymentId });
+      ctx.services.notifications.notifyCustomer(p.customer_id, 'POLICY_RENEWED', `Policy ${p.policy_number} renewed until ${rq.newEndDate}.`);
+      return { policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)), payment, documentId: doc.id, invoiceDocumentId: invoice.id };
+    });
   }
 
   function endorse(policyId, changes, user) {
