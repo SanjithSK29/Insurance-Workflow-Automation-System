@@ -10,7 +10,7 @@
       Dashboard: 'डैशबोर्ड', Profile: 'प्रोफ़ाइल', 'Get a quote': 'कोटेशन लें', Applications: 'आवेदन', Policies: 'पॉलिसियाँ',
       Claims: 'दावे', Notifications: 'सूचनाएँ', Customers: 'ग्राहक', 'Review queue': 'समीक्षा कतार', 'Manual KYC': 'मैनुअल केवाईसी',
       'My tasks': 'मेरे कार्य', 'To settle': 'निपटान हेतु', Approvals: 'अनुमोदन', Workflows: 'वर्कफ़्लो', Users: 'उपयोगकर्ता',
-      Audit: 'ऑडिट', Reports: 'रिपोर्ट', Settings: 'सेटिंग्स', 'Log in': 'लॉग इन', 'Log out': 'लॉग आउट',
+      Audit: 'ऑडिट', Reports: 'रिपोर्ट', Settings: 'सेटिंग्स', Payments: 'भुगतान', 'Log in': 'लॉग इन', 'Log out': 'लॉग आउट',
     },
   };
   let lang = safeGet('iwas.lang') || 'en';
@@ -31,7 +31,7 @@
     const isJson = (res.headers.get('content-type') || '').includes('json');
     const data = isJson ? await res.json() : await res.blob();
     if (res.status === 401 && state.token && !path.startsWith('/auth')) { logout(); throw new Error('Session expired, please log in again'); }
-    if (!res.ok) { const e = new Error(data.message || res.statusText); e.code = data.code; e.status = res.status; throw e; }
+    if (!res.ok) { const e = new Error(data.message || res.statusText); e.code = data.code; e.status = res.status; e.details = data.details; throw e; }
     return data;
   }
 
@@ -70,7 +70,7 @@
   const date = (s) => s ? String(s).slice(0, 10) : '–';
   const STATUS_TONE = { ACTIVE: 'ok', APPROVED: 'ok', VERIFIED: 'ok', SETTLED: 'ok', CAPTURED: 'ok', ISSUED: 'ok', COMPLETED: 'ok',
     MANUAL_REVIEW: 'warn', UNDER_REVIEW: 'warn', PENDING_KYC: 'warn', PENDING_MANUAL: 'warn', REGISTERED: 'warn', OPEN: 'warn', NOT_STARTED: 'warn',
-    REJECTED: 'bad', KYC_FAILED: 'bad', FAILED: 'bad', EXPIRED: 'bad' };
+    REJECTED: 'bad', KYC_FAILED: 'bad', FAILED: 'bad', EXPIRED: 'bad', CANCELLED: 'bad', PENDING: 'warn', PAID: 'ok' };
   const badge = (s) => h('span', { class: 'badge ' + (STATUS_TONE[s] || '') }, String(s || '–').replace(/_/g, ' '));
 
   function toast(msg, err = false) {
@@ -123,7 +123,12 @@
   const card = (title, ...content) => h('section', { class: 'card' }, title ? h('h2', {}, title) : null, ...content);
 
   // ---------- auth ----------
-  function logout() {
+  // `revoke` asks the server to revoke the token (DEF-14), so a copied token
+  // stops working too. Not needed when the server already rejected it (401).
+  async function logout({ revoke = false } = {}) {
+    if (revoke && state.token) {
+      try { await api('POST', '/auth/logout'); } catch { /* still sign out locally */ }
+    }
     state.token = null; state.me = null;
     sessionStorage.removeItem('iwas.token');
     render();
@@ -191,7 +196,9 @@
         stat(d.policies.active, 'Active policies'), stat(d.claims.backlog, 'Claim backlog'),
         stat(d.sla.openTasks, 'Open workflow tasks'), stat(d.sla.breachedTasks, `SLA breaches (>${d.sla.targetHours}h)`),
         stat(d.applications.pendingManualReview, 'Applications in review'), stat(d.claims.fraudFlagged, 'Fraud-flagged claims'),
-        stat(inr(d.finance.premiumCollected), 'Premium collected'), stat(inr(d.claims.totalPaidOut), 'Claims paid out')),
+        stat(inr(d.finance.premiumCollected), 'Premium collected'), stat(inr(d.claims.totalPaidOut), 'Claims paid out'),
+        d.renewals ? [stat(d.renewals.renewalWindowOpen, 'Renewals due (60 days)'), stat(d.renewals.overdue, 'Past expiry, not renewed')] : null,
+        d.finance.refunded !== undefined ? stat(inr(d.finance.refunded), 'Premium refunded') : null),
       h('div', { class: 'grid' },
         card('Policies by status', kv(d.policies.byStatus)),
         card('Claims by status', kv(d.claims.byStatus)),
@@ -309,7 +316,8 @@
     h('button', { type: 'submit' }, `Pay ${inr(app.premium)}`));
   }
 
-  async function policiesView() {
+  // `openId` re-opens a policy's details after an action, so the list above stays current.
+  async function policiesView(openId) {
     const rows = await api('GET', '/policies');
     const detail = h('div');
     page('Policies', card(null, table([
@@ -319,6 +327,7 @@
         h('button', { class: 'ghost', onclick: () => openDocument(r.documentId) }, 'PDF'),
         h('button', { class: 'ghost', onclick: () => policyDetail(r.policyId, detail) }, 'Manage'))],
     ], rows, 'No policies yet.')), detail);
+    if (openId) await policyDetail(openId, detail);
   }
 
   async function policyDetail(id, target) {
@@ -326,8 +335,18 @@
     const canChange = ['CUSTOMER', 'AGENT', 'ADMIN'].includes(state.me.role);
     const endorse = h('form', { onsubmit: onSubmit(async (d) => {
       const body = {}; if (d.nominee) body.nominee = d.nominee; if (d.address) body.address = d.address; if (d.sumInsured) body.sumInsured = Number(d.sumInsured);
-      const res = await api('POST', `/policies/${id}/endorse`, body);
-      toast(`Endorsed. Premium adjustment ${inr(res.premiumAdjustment)}`); policyDetail(id, target);
+      let res;
+      try {
+        res = await api('POST', `/policies/${id}/endorse`, body);
+      } catch (e) {
+        if (e.code !== 'PAYMENT_REQUIRED') throw e;
+        // A higher sum insured costs extra for the rest of the period: show it, then pay.
+        if (!confirm(`This change costs ${inr(e.details.premiumAdjustment)} (incl. GST) for the rest of the policy period. Pay now with the sandbox card?`)) return;
+        res = await api('POST', `/policies/${id}/endorse`, { ...body, paymentToken: 'tok_success' });
+      }
+      const adj = res.premiumAdjustment;
+      toast(adj > 0 ? `Endorsed. ${inr(adj)} paid; the invoice is under Documents` : adj < 0 ? `Endorsed. ${inr(-adj)} will be refunded` : 'Endorsed');
+      policiesView(id);
     }) },
     h('div', { class: 'row' }, field('Nominee', 'nominee', { value: p.nominee }), field('Address', 'address', { value: p.address }), field('Sum insured (₹)', 'sumInsured', { type: 'number', placeholder: String(p.sumInsured) })),
     h('button', { type: 'submit' }, 'Submit endorsement'));
@@ -335,9 +354,22 @@
       const rq = await api('GET', `/policies/${id}/renewal-quote`);
       if (!confirm(`Renew until ${rq.newEndDate} for ${inr(rq.premium)}? (sandbox card)`)) return;
       await api('POST', `/policies/${id}/renew`, { paymentToken: 'tok_success' });
-      toast('Policy renewed'); policyDetail(id, target);
+      toast('Policy renewed'); policiesView(id);
     }) }, 'Renew policy'));
+    const cancelForm = h('form', { onsubmit: onSubmit(async (d) => {
+      if (!confirm(`Cancel policy ${p.policyNumber}? Cover ends today and the unused premium is refunded, less a cancellation charge. This cannot be undone.`)) return;
+      const res = await api('POST', `/policies/${id}/cancel`, d.reason ? { reason: d.reason } : {});
+      toast(`Policy cancelled. ${inr(res.refundAmount)} will be refunded`); policiesView(id);
+    }) },
+    field('Reason (optional)', 'reason', { maxlength: 500 }),
+    h('div', { class: 'actions' }, h('button', { type: 'submit', class: 'danger' }, 'Cancel policy')));
+    const c = p.cancellation;
     target.replaceChildren(card(`Policy ${p.policyNumber}`,
+      h('p', {}, badge(p.status), ` ${p.coverageType} · ${inr(p.sumInsured)} · ${p.startDate} → ${p.endDate}`),
+      c ? [h('h3', {}, 'Cancellation'), h('dl', { class: 'kv' },
+        h('dt', {}, 'Cancelled on'), h('dd', {}, date(c.created_at)), h('dt', {}, 'Reason'), h('dd', {}, c.reason || '–'),
+        h('dt', {}, 'Unused premium'), h('dd', {}, inr(c.gross_refund)), h('dt', {}, 'Cancellation charge'), h('dd', {}, inr(c.fee)),
+        h('dt', {}, 'Refund'), h('dd', {}, h('strong', {}, inr(c.refund_amount))))] : null,
       h('h3', {}, 'Documents'),
       table([['Kind', (d) => d.kind], ['File', (d) => d.filename], ['Created', (d) => date(d.created_at)],
         ['', (d) => h('div', { class: 'actions' }, h('button', { class: 'ghost', onclick: () => openDocument(d.id) }, 'Open'),
@@ -345,8 +377,18 @@
       h('h3', {}, 'Endorsement history'),
       table([['When', (e) => date(e.created_at)], ['Changes', (e) => JSON.stringify(e.changes)], ['Previous', (e) => JSON.stringify(e.previous)], ['Premium adj.', (e) => inr(e.premium_adjustment)]], p.endorsements, 'No endorsements.'),
       canChange && p.status === 'ACTIVE' ? [h('h3', {}, 'Change policy details'), endorse] : null,
-      ['CUSTOMER', 'AGENT'].includes(state.me.role) ? [h('h3', {}, 'Renewal'), h('p', { class: 'muted' }, 'Renewal opens 60 days before expiry.'), renew] : null));
+      ['CUSTOMER', 'AGENT'].includes(state.me.role) && ['ACTIVE', 'EXPIRED'].includes(p.status) ? [h('h3', {}, 'Renewal'), h('p', { class: 'muted' }, 'Renewal opens 60 days before expiry.'), renew] : null,
+      canChange && p.status === 'ACTIVE' ? [h('h3', {}, 'Cancel policy'), cancelForm] : null));
     target.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function paymentsView() {
+    const rows = await api('GET', '/payments');
+    page('Payments', card(null, table([
+      ['Date', (r) => date(r.createdAt)], ['For', (r) => r.purpose.replace(/_/g, ' ').toLowerCase()],
+      ['Amount', (r) => inr(r.amount)], ['GST', (r) => inr(r.taxAmount)], ['Status', (r) => badge(r.status)],
+      ['', (r) => r.invoiceDocumentId ? h('button', { class: 'ghost', onclick: () => openDocument(r.invoiceDocumentId) }, 'Invoice') : r.failureReason ? h('span', { class: 'muted' }, r.failureReason) : null],
+    ], rows, 'No payments yet.')));
   }
 
   const TRACK = ['REGISTERED', 'UNDER_REVIEW', 'APPROVED', 'SETTLED'];
@@ -519,7 +561,7 @@
     page('Reports', card('Export', h('div', { class: 'table-wrap' }, table([['Report', (r) => r[1]], ['', (r) => h('div', { class: 'actions' },
       h('button', { class: 'ghost', onclick: () => download(`/admin/reports/${r[0]}?format=csv`, `${r[0]}.csv`) }, 'CSV'),
       h('button', { class: 'ghost', onclick: () => download(`/admin/reports/${r[0]}?format=pdf`, `${r[0]}.pdf`) }, 'PDF'))]],
-    [['policies', 'Policy register'], ['claims', 'Claims register'], ['payments', 'Premium collections']]))));
+    [['policies', 'Policy register'], ['renewals', 'Renewals due'], ['claims', 'Claims register'], ['payments', 'Premium collections']]))));
   }
 
   async function settingsView() {
@@ -536,11 +578,11 @@
 
   // ---------- routing ----------
   const VIEWS = {
-    CUSTOMER: [['profile', 'Profile', profileView], ['quote', 'Get a quote', () => quoteView()], ['applications', 'Applications', applicationsView], ['policies', 'Policies', policiesView], ['claims', 'Claims', claimsView], ['notifications', 'Notifications', notificationsView]],
-    AGENT: [['customers', 'Customers', customersView], ['quote', 'Get a quote', () => quoteView()], ['applications', 'Applications', applicationsView], ['policies', 'Policies', policiesView], ['claims', 'Claims', claimsView], ['notifications', 'Notifications', notificationsView]],
+    CUSTOMER: [['profile', 'Profile', profileView], ['quote', 'Get a quote', () => quoteView()], ['applications', 'Applications', applicationsView], ['policies', 'Policies', policiesView], ['claims', 'Claims', claimsView], ['payments', 'Payments', paymentsView], ['notifications', 'Notifications', notificationsView]],
+    AGENT: [['customers', 'Customers', customersView], ['quote', 'Get a quote', () => quoteView()], ['applications', 'Applications', applicationsView], ['policies', 'Policies', policiesView], ['claims', 'Claims', claimsView], ['payments', 'Payments', paymentsView], ['notifications', 'Notifications', notificationsView]],
     UNDERWRITER: [['review', 'Review queue', reviewView], ['kyc', 'Manual KYC', manualKycView], ['applications', 'Applications', applicationsView], ['dashboard', 'Dashboard', dashboardView], ['notifications', 'Notifications', notificationsView]],
     ADJUSTER: [['tasks', 'My tasks', tasksView], ['settle', 'To settle', settleView], ['claims', 'Claims', claimsView], ['dashboard', 'Dashboard', dashboardView], ['notifications', 'Notifications', notificationsView]],
-    ADMIN: [['dashboard', 'Dashboard', dashboardView], ['tasks', 'Approvals', tasksView], ['workflows', 'Workflows', workflowsView], ['users', 'Users', usersView], ['audit', 'Audit', auditView], ['reports', 'Reports', reportsView], ['settings', 'Settings', settingsView], ['policies', 'Policies', policiesView], ['claims', 'Claims', claimsView]],
+    ADMIN: [['dashboard', 'Dashboard', dashboardView], ['tasks', 'Approvals', tasksView], ['workflows', 'Workflows', workflowsView], ['users', 'Users', usersView], ['audit', 'Audit', auditView], ['reports', 'Reports', reportsView], ['settings', 'Settings', settingsView], ['policies', 'Policies', policiesView], ['claims', 'Claims', claimsView], ['payments', 'Payments', paymentsView]],
   };
 
   async function go(id) {
@@ -573,7 +615,7 @@
     const id = location.hash.slice(1);
     if (state.me && id && id !== state.view) go(id);
   });
-  document.getElementById('logout').addEventListener('click', logout);
+  document.getElementById('logout').addEventListener('click', () => logout({ revoke: true }));
   const langSel = document.getElementById('lang');
   langSel.value = lang;
   langSel.addEventListener('change', () => { lang = langSel.value; safeSet('iwas.lang', lang); document.documentElement.lang = lang; render(); });

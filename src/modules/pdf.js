@@ -5,10 +5,16 @@ const PAGE_W = 595;
 const PAGE_H = 842;
 const MARGIN = 50;
 
+// The file is written as Latin-1 with WinAnsi fonts, so printable Latin-1
+// (accented names such as Zoë, José) is kept as is (DEF-12). Common
+// typographic characters are mapped to plain ones; anything else the
+// standard fonts cannot draw (e.g. Devanagari) becomes '?'.
+const SUBSTITUTES = { '₹': 'INR ', '‘': "'", '’': "'", '“': '"', '”': '"', '–': '-', '—': '-', '…': '...', '•': '*' };
+
 const clean = (s) =>
   String(s ?? '')
-    .replace(/₹/g, 'INR ')
-    .replace(/[^\x20-\x7E]/g, '?')
+    .replace(/[₹‘’“”–—…•]/g, (ch) => SUBSTITUTES[ch])
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '?')
     .replace(/\\/g, '\\\\')
     .replace(/\(/g, '\\(')
     .replace(/\)/g, '\\)');

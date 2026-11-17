@@ -2,8 +2,8 @@
 
 This matrix updates SRS §8 and STP §13 with the implementation and test results.
 Status: **P** = passed, **A** = automated check in CI, **M** = manual / environment-dependent verification.
-Last run (17-11-2026): `npm test` on Node.js 25.2.0 (Windows 11): **122 tests, 122 passed, 0 failed**. CI re-runs the suite on Node.js 22 for every push and pull request.
-Coverage (`npm run test:coverage`, c8 with `--all`): **94.68 % statements, 82.18 % branches, 93.53 % functions, 94.68 % lines**; CI fails below 93 / 80 / 92 / 93. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md). Defects: [Defect Log](reports/DEFECT_LOG.md). Deviations: [DEVIATIONS.md](DEVIATIONS.md).
+Last run (17-11-2026, after the Developer Lead cycle on branch `samarth-dev-hardening`): `npm test` on Node.js 22.19.0 (Windows 11): **154 tests, 154 passed, 0 failed** (122 at the end of the QA cycle). CI re-runs the suite on Node.js 22 for every push and pull request.
+Coverage (`npm run test:coverage`, c8 with `--all`): **96.44 % statements, 85.56 % branches, 94.16 % functions, 96.44 % lines** (QA cycle: 94.68 / 82.18 / 93.53 / 94.68); CI fails below 93 / 80 / 92 / 93. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md). Defects: [Defect Log](reports/DEFECT_LOG.md). Deviations: [DEVIATIONS.md](DEVIATIONS.md).
 
 ## Functional requirements
 
@@ -12,11 +12,11 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **94.68 % statements, 82.18
 | IWA-F-001 | Personalised quote within 10 s | `src/modules/quotes.js` | TC-Quote-01, TC-Quote-02, TC-Quote-06/07 (numeric input, DEF-04) | quote-underwriting, numeric-input | P |
 | IWA-F-002 | Risk score 0–100; high risk flagged for manual review | `src/modules/underwriting.js` | TC-UW-01 (×2), threshold config, TC-Admin-02 (threshold input, DEF-07) | quote-underwriting, numeric-input | P |
 | IWA-F-003 | KYC verified before issuance | `src/modules/customers.js`, `payments.js` | TC-KYC-01, manual-queue fallback, TC-KYC-03/04 (income input, DEF-05) | quote-underwriting, numeric-input | P |
-| IWA-F-010 | Signed digital policy PDF after payment | `src/modules/policies.js`, `documents.js`, `pdf.js` | TC-Policy-01, TC-Policy-02 | policy.test.js | P |
-| IWA-F-011 | Renewal with reminders at 30/15/7 days | `policies.js` (`runRenewalReminders`), `server.js` scheduler | TC-Renew-01, renewal payment | policy.test.js | P |
-| IWA-F-012 | Endorsement with audit trail | `policies.js` (`endorse`) | TC-Endorse-01, TC-Endorse-02 (sum insured input, DEF-06) | policy, numeric-input | P |
-| IWA-F-013 | Invoice PDF with tax breakup | `payments.js` (`generateInvoice`) | TC-Invoice-01 | policy.test.js | P |
-| IWA-F-014 | Policy cancellation with pro-rata refund | `policies.js` (`cancel`), `payments.js` (`refund`), `documents.js` (cancellation letter) | TC-Cancel-01, TC-Cancel-02 | policy-cancellation.test.js | P |
+| IWA-F-010 | Signed digital policy PDF after payment | `src/modules/policies.js`, `payments.js` (one payment at a time, DEF-08), `documents.js`, `pdf.js` (accented names, DEF-12) | TC-Policy-01..04, TC-Pay-03/05/06, TC-Doc-01/02, TC-PDF-03..05 | policy, payments-hardening, documents-pdf, policies-payments-edge-cases | P |
+| IWA-F-011 | Renewal with reminders at 30/15/7 days | `policies.js` (`runRenewalReminders`, `renew` under the payment lock), `server.js` scheduler | TC-Renew-01..04, TC-Pay-04 (double renewal, DEF-08) | policy, payments-hardening, policies-payments-edge-cases | P |
+| IWA-F-012 | Endorsement with audit trail | `policies.js` (`endorse`: premium difference charged or refunded, DEF-09; text fields, DEF-11) | TC-Endorse-01..06 | policy, numeric-input, endorsement-cancellation, policies-payments-edge-cases | P |
+| IWA-F-013 | Invoice PDF with tax breakup | `payments.js` (`generateInvoice`, also for paid endorsements) | TC-Invoice-01, TC-Endorse-03 | policy, endorsement-cancellation | P |
+| IWA-F-014 | Policy cancellation with pro-rata refund | `policies.js` (`cancel`, `unusedPremium` per paid period, DEF-10), `payments.js` (`refund`), `documents.js` (cancellation letter), web UI cancel form | TC-Cancel-01..05 | policy-cancellation, endorsement-cancellation | P |
 | IWA-F-020 | Claim registration with document upload (10 MB) | `src/modules/claims.js` | TC-Claim-01 – TC-Claim-11, TC-Contract-01 – 05, TC-Date-01 – 03, TC-Sec-Claim-04 – 06 | claims-workflow, claims-edge-cases, claims-contract, date-validation, claims-security | P |
 | IWA-F-021 | Configurable multi-level BPMN approval | `src/workflow/*`, `claim-approval.bpmn` | TC-WF-01 – TC-WF-03, TC-Sec-Claim-07 | claims-workflow, claims-edge-cases, claims-security | P |
 | IWA-F-022 | Automated fraud detection | `src/modules/fraud.js` | TC-Fraud-01 – TC-Fraud-11 | claims-workflow.test.js, fraud-settlement.test.js | P |
@@ -36,7 +36,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **94.68 % statements, 82.18
 | IWA-NF-002 | 99.9 % availability | Health endpoint, Docker `HEALTHCHECK`, stateless app (horizontally scalable), circuit breakers on vendors; notification failures cannot crash the process (DEF-01 fix) | CI container health check, TC-Notify-10 – 12 | A / M (needs production monitoring) |
 | IWA-NF-003 | AES-256 at rest, TLS 1.2+ in transit | `security/crypto.js` (AES-256-GCM), `server.js` (`minVersion: TLSv1.2`) | TC-Sec-01, TC-Sec-TLS-01 | P |
 | IWA-NF-004 | Audit retention 7 years, immutable | Append-only triggers + hash chain; no delete path in code | TC-Audit-01 | P (retention = ops policy, M) |
-| IWA-NF-005 | WCAG 2.1 AA | Labels, skip link, focus outlines, `aria-live` toasts, contrast-checked palette, keyboard-only flows | Manual audit (axe / Lighthouse) | M |
+| IWA-NF-005 | WCAG 2.1 AA | Labels, skip link, focus ring, `aria-live` toasts, keyboard-only flows; colour tokens meet 4.5:1 / 3:1 in both themes (DEF-13) | TC-UX-01..04: axe-core WCAG A/AA rules on every screen of every role, plus a contrast check; screen-reader walk-through at UAT | P (automated) / M (screen reader) |
 | IWA-SR-001 | TLS 1.2+ mandatory | HTTPS server option, HSTS header | TC-Sec-TLS-01 | P |
 | IWA-SR-002 | MFA for admin and underwriter | TOTP (RFC 6238) in `security/auth.js`, enforced in `users.js` | TC-Sec-MFA-01 | P |
 | IWA-SR-003 | PII masked in logs and UI | `security/pii.js`, `core/logger.js`, audit redaction | TC-Sec-PII-01, TC-Sec-Claim-03 | P |
@@ -59,6 +59,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **94.68 % statements, 82.18
 | STP §5.1 injection and path-traversal fuzzing on claim inputs | claims-security.test.js |
 | Shared numeric input rule `parseNumber()` (DEF-03..07) | numeric-input.test.js |
 | Coverage gate (statements 93 %, branches 80 %, functions 92 %, lines 93 %) | `.c8rc.json`, CI job "Coverage report (c8)" |
+| Web UI logout revokes the token server-side (DEF-14; SR-002, F-031) | ui-accessibility.test.js (TC-UX-05) |
 
 ## Clarified behaviour found during testing
 
@@ -72,7 +73,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **94.68 % statements, 82.18
 
 | Criterion (STP §5) | Result |
 | --- | --- |
-| 100 % of planned automated test cases executed | 122 / 122 executed, 122 passed |
-| 0 critical defects open | 0 open (7 found this cycle: 1 High, 4 Medium, 2 Low; all fixed and re-tested) |
+| 100 % of planned automated test cases executed | 154 / 154 executed, 154 passed |
+| 0 critical defects open | 0 open (14 found this cycle: 3 High, 7 Medium, 4 Low; all fixed and re-tested) |
 | All high-priority acceptance criteria met | All high-priority F- and SR- requirements are P |
-| Items that need a deployed environment | NF-002 uptime, NF-005 accessibility audit, k6 load test, OWASP ZAP scan: planned for UAT |
+| Items that need a deployed environment | NF-002 uptime, k6 load test, OWASP ZAP scan, NF-005 screen-reader walk-through: planned for UAT (the automated WCAG checks now run in CI) |

@@ -46,6 +46,22 @@ module.exports = function paymentsModule(ctx) {
   const { db, config, audit } = ctx;
   const gateway = createGateway();
 
+  // One payment at a time per application or policy (DEF-08). Without this, a
+  // second request arriving while the gateway call is in flight passes the same
+  // status checks and charges the customer again. IWAS runs as a single Node
+  // process on SQLite, so an in-process lock closes the gap; a multi-instance
+  // deployment would need a database-level lock instead.
+  const inFlight = new Set();
+  async function withPaymentLock(key, fn) {
+    if (inFlight.has(key)) throw conflict('PAYMENT_IN_PROGRESS', 'A payment for this item is already being processed');
+    inFlight.add(key);
+    try {
+      return await fn();
+    } finally {
+      inFlight.delete(key);
+    }
+  }
+
   // Charge `total` (tax inclusive). Returns the payment row id and status.
   async function charge({ purpose, referenceId, policyId = null, total, token, actorId }) {
     const base = round2(total / (1 + config.gstRate));
@@ -148,18 +164,23 @@ module.exports = function paymentsModule(ctx) {
     const kyc = db.get('SELECT kyc_status FROM customers WHERE id = ?', app.customer_id).kyc_status;
     if (kyc !== 'VERIFIED') throw conflict('KYC_REQUIRED', 'KYC must be verified before policy issuance');
 
-    const quote = db.get('SELECT * FROM quotes WHERE id = ?', app.quote_id);
-    const payment = await charge({ purpose: 'NEW_POLICY', referenceId: app.id, total: quote.premium, token: paymentToken, actorId: req.user.id });
-    const policy = ctx.services.policies.issue(app, payment.paymentId, req.user.id);
-    const invoice = generateInvoice(payment.paymentId, { customerId: app.customer_id, policyNumber: policy.policyNumber, description: `${quote.coverage_type} insurance premium, ${quote.term} year(s)` });
-    res.status(201).json({ ...payment, invoiceDocumentId: invoice.id, policy });
+    const result = await withPaymentLock(`application:${app.id}`, async () => {
+      const quote = db.get('SELECT * FROM quotes WHERE id = ?', app.quote_id);
+      const payment = await charge({ purpose: 'NEW_POLICY', referenceId: app.id, total: quote.premium, token: paymentToken, actorId: req.user.id });
+      const policy = ctx.services.policies.issue(app, payment.paymentId, req.user.id);
+      const invoice = generateInvoice(payment.paymentId, { customerId: app.customer_id, policyNumber: policy.policyNumber, description: `${quote.coverage_type} insurance premium, ${quote.term} year(s)` });
+      return { ...payment, invoiceDocumentId: invoice.id, policy };
+    });
+    res.status(201).json(result);
   }));
 
   router.get('/', (req, res) => {
     let rows;
-    if (req.user.role === 'CUSTOMER') {
+    if (req.user.role === 'CUSTOMER' || req.user.role === 'AGENT') {
+      // Customers see their own payments; agents see their portfolio's.
+      const owner = req.user.role === 'CUSTOMER' ? 'c.user_id' : 'c.agent_id';
       rows = db.all(`SELECT p.* FROM payments p LEFT JOIN applications a ON a.id = p.reference_id LEFT JOIN policies po ON po.id = p.policy_id
-        JOIN customers c ON c.id = COALESCE(a.customer_id, po.customer_id) WHERE c.user_id = ? ORDER BY p.created_at DESC`, req.user.id);
+        JOIN customers c ON c.id = COALESCE(a.customer_id, po.customer_id) WHERE ${owner} = ? ORDER BY p.created_at DESC`, req.user.id);
     } else if (['ADMIN', 'UNDERWRITER'].includes(req.user.role)) {
       rows = db.all('SELECT * FROM payments ORDER BY created_at DESC LIMIT 500');
     } else {
@@ -168,5 +189,5 @@ module.exports = function paymentsModule(ctx) {
     res.json(rows.map(present));
   });
 
-  return { charge, payout, refund, generateInvoice, gateway, router };
+  return { charge, payout, refund, generateInvoice, withPaymentLock, gateway, router };
 };

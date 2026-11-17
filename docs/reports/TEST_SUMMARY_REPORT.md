@@ -93,12 +93,17 @@ Steps to reproduce, root causes and fix commits: [DEFECT_LOG.md](DEFECT_LOG.md).
 | Cross-module review of the other members' modules; DEF-04..07 fixed with a shared `parseNumber()` (PR #11) | 17-11-2026 | Vishal |
 | Smoke test of the running server | 17-11-2026 | Vishal |
 | Reports, RTM, test case document, defect log, deviations | 17-11-2026 | Vishal |
-| Code review and approval | pending | Samarth (Developer Lead) |
+| Code review of PRs #6–#13 and approval ([Code Review Log](CODE_REVIEW_LOG.md)) | 17-11-2026 | Samarth (Developer Lead) |
+| Developer Lead cycle: 32 cases for policies, payments, documents and the web UI; DEF-08..14 found and fixed ([Developer Lead Report](DEV_LEAD_REPORT.md)) | 17-11-2026 | Samarth |
+
+## 9a. Addendum: Developer Lead cycle (17-11-2026)
+
+After this report's QA cycle, the Developer Lead tested his own modules and the web UI the same way (failing test first, then fix). Totals at the end of the day: **154 / 154 tests passing**, **14 defects** found and fixed (3 High, 7 Medium, 4 Low; DEF-08..14 are the Developer Lead's), coverage **96.44 % statements / 85.56 % branches / 94.16 % functions**. The WCAG 2.1 AA check (NF-005), listed above as needing UAT, is now automated with axe-core and a contrast check; a screen-reader walk-through remains for UAT. Details: [Developer Lead Report](DEV_LEAD_REPORT.md), [Defect Log](DEFECT_LOG.md).
 
 ## 10. Approvals
 
 | Role | Name | Signature / Date |
 | --- | --- | --- |
 | QA Lead | Sakaray Vishal | |
-| Developer Lead | Samarth A | |
+| Developer Lead | Samarth A | Approved 17-11-2026, with the notes in the Code Review Log |
 | Project Lead | Sanjith Suresh Kumar | |

@@ -3,9 +3,9 @@
 | | |
 | --- | --- |
 | Project | Insurance Workflow Automation System (IWAS) |
-| Document | Test Case Document, version 2.2 (updates the test cases in STP v1.0 §3 and §13) |
-| History | 2.0: 86 cases after the sprints (PR #9). 2.1: 114 cases, adds contract, security, defect-regression, settlement-letter and tracking cases (PR #10). 2.2: 122 cases, adds numeric-input cases for DEF-04..07 (PR #11). |
-| Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241 |
+| Document | Test Case Document, version 2.3 (updates the test cases in STP v1.0 §3 and §13) |
+| History | 2.0: 86 cases after the sprints (PR #9). 2.1: 114 cases, adds contract, security, defect-regression, settlement-letter and tracking cases (PR #10). 2.2: 122 cases, adds numeric-input cases for DEF-04..07 (PR #11). 2.3: 154 cases, adds the Developer Lead's cases for policies, payments, documents and the web UI, DEF-08..14 (branch `samarth-dev-hardening`). |
+| Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241; sections 3.2 and 3.16 extended by Samarth A (Developer Lead) |
 | Reviewed by | Samarth A (Developer Lead) |
 | Date | 17-11-2026 |
 | Related | [STP](../STP%20-%20Insurance%20Workflow%20Automation%20System.pdf), [RTM](TRACEABILITY.md), [reports](reports/) |
@@ -24,13 +24,14 @@ STP v1.0 (31-08-2025) listed 9 features to test and named 11 example test cases 
 | 6 | The SAD (§4.3.2 Claim API, §4.4 error envelope) and STP §5.1 (RBAC bypass, fuzzing) had no direct test cases for the claims module, and the "Track Claim Status" use case (SRS §7.1) had none. | Contract, security, settlement-letter and tracking test cases added (sections 3.10, 3.12–3.14). |
 | 7 | Testing found three defects (DEF-01 server crash on unreadable contact details, DEF-02 impossible dates accepted, DEF-03 coerced amounts). Each got a failing test first, then a fix. | Sections 3.9 and 3.11, and TC-Sec-Claim-06/07; see [DEFECT_LOG.md](reports/DEFECT_LOG.md). |
 | 8 | A review of the other modules found the DEF-03 coercion in quotes, customer income, endorsements and the admin risk threshold (DEF-04..07). | Section 3.15 (TC-Num, TC-Quote-06/07, TC-KYC-03/04, TC-Endorse-02, TC-Admin-02). |
+| 9 | The Developer Lead tested his own modules (policies, payments, documents, PDF, web UI), whose branch coverage was 76–82 %, and found DEF-08..14: double charges, unpaid endorsements, wrong refunds after renewal, loose endorsement text, accented names in PDFs, colour contrast and logout not revoking the token. The WCAG audit (TC-UX-01), planned for UAT, was automated with axe-core. | 32 test cases: section 3.2 (TC-Pay-03..08, TC-Endorse-03..06, TC-Cancel-03..05, TC-Renew-03/04, TC-Policy-03/04, TC-Doc-01/02, TC-PDF-03..05) and section 3.16 (TC-UX-01..05). |
 
-After all changes: **122 test cases in 17 files**. Branch coverage of the QA Lead's modules: claims 96.55 %, fraud 100 %, settlement 100 %, notifications 100 %.
+After all changes: **154 test cases in 22 files** (122 after the QA cycle, then 32 from the Developer Lead). Branch coverage of the QA Lead's modules: claims 96.55 %, fraud 100 %, settlement 100 %, notifications 100 %.
 
 ## 2. Conventions
 
 - **Level:** U = unit (function called directly), I = integration (module through the HTTP API with a real database), S = system (end-to-end business flow across several modules).
-- **Status** is the result of the run on 17-11-2026: P = passed. All 122 automated cases passed.
+- **Status** is the result of the run on 17-11-2026: P = passed. All 154 automated cases passed (122 in the QA cycle, 32 added by the Developer Lead the same day).
 - Every API test runs against an isolated in-memory database created by `test/helpers.js`, with one user per role (ADMIN, UNDERWRITER, ADJUSTER, AGENT, CUSTOMER) and synthetic customer data (STP §6 "Test Data").
 - Run everything with `npm test`; run with coverage with `npm run test:coverage`.
 
@@ -51,7 +52,7 @@ After all changes: **122 test cases in 17 files**. Branch coverage of the QA Lea
 | TC-KYC-02 | F-003 | S | KYC provider outage | Application goes to manual queue, underwriter resolves it, flow resumes | P |
 | TC-Quote-05 | F-001 | I | Apply with an expired or already-used quote | Request refused | P |
 
-### 3.2 Policies, payments and documents (owner: Samarth) — `test/policy.test.js`, `test/policy-cancellation.test.js`, `test/renewals-report.test.js`
+### 3.2 Policies, payments and documents (owner: Samarth) — `test/policy.test.js`, `test/policy-cancellation.test.js`, `test/renewals-report.test.js`, `test/payments-hardening.test.js`, `test/endorsement-cancellation.test.js`, `test/documents-pdf.test.js`, `test/policies-payments-edge-cases.test.js`
 
 | ID | Req | Level | Test case | Expected result | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -66,6 +67,28 @@ After all changes: **122 test cases in 17 files**. Branch coverage of the QA Lea
 | TC-Renewal-Report-01 | F-033 | I | Renewals-due report | Active policies by soonest expiry with days to expiry | P |
 | TC-Renewal-Report-02 | F-033, F-031 | I | Renewals report as PDF | PDF rendered; admin only | P |
 | TC-Renewal-Report-03 | F-032 | I | Dashboard renewal pipeline | Overdue and window-open counts shown | P |
+| TC-Pay-03 | F-010 | S | Two premium payments for one application sent at once | One charge, one policy; the other request gets 409 PAYMENT_IN_PROGRESS; a later retry gets ALREADY_ISSUED | P (failed before fix, DEF-08) |
+| TC-Pay-04 | F-011 | S | Two renewals of one policy sent at once | One renewal charge, policy extended once | P (failed before fix, DEF-08) |
+| TC-Pay-05 | F-010 | I | Declined payment, then retry | Lock released; retry succeeds | P |
+| TC-Pay-06 | F-010 | I | Missing fields, unknown application, application not approved, unknown token, someone else's application | 400, 404, 409 (nothing charged), 402, 403 | P |
+| TC-Pay-07 | F-031 | I | Payment history by role | Customer: own; agent: portfolio; admin: all; adjuster: none | P (agent list was empty before) |
+| TC-Pay-08 | F-014, F-023 | U | Refund, payout and charge with negative, NaN or zero amounts | Rejected | P |
+| TC-Endorse-03 | F-012, F-013 | S | Raise the sum insured without payment, with a declined card, then paid | 402 PAYMENT_REQUIRED with the amount; declined changes nothing; paid applies the change, records an ENDORSEMENT payment and a GST invoice | P (failed before fix, DEF-09) |
+| TC-Endorse-05 | F-012 | I | Lower the sum insured; change only the nominee | Difference refunded; nominee change costs nothing | P (failed before fix, DEF-09) |
+| TC-Endorse-04 | F-012 | I | Nominee/address as object, array or number; sum insured as hex, boolean, array or "7e5"; then "700000" | 400 and nothing saved; plain decimal string accepted (asks for payment) | P (failed before fix, DEF-11) |
+| TC-Endorse-06 | F-012, F-031 | I | Empty body, unknown field, too-short nominee/address, sum insured below 50,000 or above the income limit, underwriter endorsing, cancelled policy | 400 / 403 / 409 | P |
+| TC-Cancel-03 | F-014 | S | Renew early, then cancel | Refund = unused days of the old year + the whole new year, minus 5 % | P (failed before fix, DEF-10) |
+| TC-Cancel-04 | F-014 | S | Cancel during the renewed year | Renewal premium pro-rated over the renewed year only | P (failed before fix, DEF-10) |
+| TC-Cancel-05 | F-014, F-012 | S | Pay for an endorsement, then cancel the same day | Endorsement payment refunded in full with the unused premium | P |
+| TC-Renew-03 | F-011 | I | Reminder job after a policy's end date | Policy marked EXPIRED | P |
+| TC-Renew-04 | F-011 | I | Renew without a token, after the 30-day grace period, above the maximum age, or a cancelled policy | 400, 409 LAPSED, 422 NOT_RENEWABLE, 409 NOT_RENEWABLE; nothing charged | P |
+| TC-Policy-03 | F-010 | S | Policyholder named "Zoë Fernández" | Name printed exactly on the signed schedule | P (failed before fix, DEF-12) |
+| TC-Policy-04 | F-010, F-031 | I | Policy lists by role; look up by policy number; unknown id | Scoped lists; invoice listed with the policy; 404 | P |
+| TC-Doc-01 | SR-005, F-031 | I | Read and verify documents as another customer, an agent outside / inside the portfolio, staff, anonymous | 403, 403 / 200, 200, 401; unknown id 404 | P |
+| TC-Doc-02 | SR-005 | I | Public signing key; verify an uploaded (unsigned) claim document | PEM key; `signed: false`, integrity valid | P |
+| TC-PDF-03 | F-010, F-013 | U | Accented Latin text and typographic punctuation | Accents kept; quotes, dashes, ₹ and … mapped to plain text | P (failed before fix, DEF-12) |
+| TC-PDF-04 | F-010 | U | Text the PDF fonts cannot draw (Devanagari) | One "?" per character; file offsets still valid | P |
+| TC-PDF-05 | F-010 | U | Empty document; unbroken 500-character word at a page end | One page; word split and continued on a new page | P |
 
 ### 3.3 Admin, security and RBAC (owner: Sampreeth) — `test/admin-security.test.js`
 
@@ -233,6 +256,18 @@ After all changes: **122 test cases in 17 files**. Branch coverage of the QA Lea
 | TC-Endorse-02 | F-012 | I | Endorse `sumInsured` `"0x10000"`, `[700000]`, `true`; then `"600000"` | 400 and cover/history unchanged; numeric string raises cover with extra premium | P (failed before fix) |
 | TC-Admin-02 | F-002 | I | Risk threshold `true`, `false`, `""`, `[70]`, `"0x40"`, `null`; then `"70"` | 400 and threshold unchanged; `"70"` saved | P (failed before fix) |
 
+### 3.16 Web UI accessibility and session (owner: Samarth, new) — `test/ui-accessibility.test.js`
+
+Every screen is rendered from the real app (seeded demo data) in jsdom and checked with axe-core 4.10 against the WCAG 2.0/2.1 A and AA rules. jsdom cannot measure colour, so contrast is computed from the stylesheet's colour tokens.
+
+| ID | Req | Level | Test case | Expected result | Status |
+| --- | --- | --- | --- | --- | --- |
+| TC-UX-01 | NF-005 | S | Sign-in screen | No WCAG A/AA violations | P |
+| TC-UX-02 | NF-005 | S | Every navigation screen and the policy details panel, for each of the five roles | No WCAG A/AA violations | P |
+| TC-UX-03 | NF-005 | S | Skip link, language switch label, live region, current-page marker | Present and correctly wired | P |
+| TC-UX-04 | NF-005 | U | Text and focus-ring contrast in light and dark themes | Text ≥ 4.5:1, focus ring ≥ 3:1 | P (failed before fix, DEF-13) |
+| TC-UX-05 | F-031, SR-002 | S | Log out in the UI, then reuse the copied token | Token revoked: 401 | P (failed before fix, DEF-14) |
+
 ## 4. Manual and environment-dependent checks
 
 | ID | Req | Check | Result on 17-11-2026 |
@@ -240,6 +275,6 @@ After all changes: **122 test cases in 17 files**. Branch coverage of the QA Lea
 | TC-Smoke-01 | NF-002 | Start `src/server.js`, call `/api/v1/health` | `{"status":"UP"}`; also run in CI after every push |
 | TC-Smoke-02 | SR-001, STP 5.1 | Response headers on the running server | HSTS, CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` present |
 | TC-Smoke-03 | F-031 | `GET /api/v1/claims` without a token; `POST /api/v1/quote` with empty body | 401; 400 |
-| TC-UX-01 | NF-005 | WCAG 2.1 AA audit (axe / Lighthouse) | Not run yet: planned for UAT |
+| TC-UX-01 | NF-005 | WCAG 2.1 AA audit (axe / Lighthouse) | Automated with axe-core and a contrast check, see section 3.16. Still to do at UAT: a screen-reader walk-through and a check in real browsers |
 | TC-Perf-02 | NF-001 | k6 load test `perf/quote-load.js` (quote and claim-status APIs, p95 < 2 s each) against a deployed environment | Script ready; setup flow checked against a running instance; not run yet: needs a deployed environment |
 | TC-Sec-ZAP-01 | STP 5.1 | OWASP ZAP scan | Not run yet: CI runs CodeQL, gitleaks and `npm audit` instead |

@@ -6,10 +6,19 @@ const { newId, nowIso } = require('../core/db');
 const { ah, addDays, addYears, daysBetween, today, round2, ageOn, parseJson, parseNumber } = require('../core/util');
 const { requireRole } = require('../security/middleware');
 const { calculatePremium, PRODUCTS } = require('./quotes');
-const { badRequest, notFound, conflict, unprocessable } = require('../core/errors');
+const { badRequest, notFound, conflict, unprocessable, ApiError } = require('../core/errors');
 
 const ENDORSABLE = ['nominee', 'address', 'sumInsured'];
 const RENEWAL_WINDOW_DAYS = 60;
+
+// Endorsement text must be a real JSON string (DEF-11): String({}) would
+// otherwise be saved as "[object Object]". Numbers use parseNumber (DEF-06).
+function parseText(value, field, min, max) {
+  if (typeof value !== 'string') throw badRequest(`${field} must be text`);
+  const text = value.trim();
+  if (text.length < min || text.length > max) throw badRequest(`${field} must be ${min}-${max} characters`);
+  return text;
+}
 
 module.exports = function policiesModule(ctx) {
   const { db, config, audit, bus } = ctx;
@@ -91,19 +100,30 @@ module.exports = function policiesModule(ctx) {
     if (daysLeft > RENEWAL_WINDOW_DAYS) throw conflict('TOO_EARLY', `Renewal opens ${RENEWAL_WINDOW_DAYS} days before expiry`);
     if (daysLeft < -30) throw conflict('LAPSED', 'Grace period of 30 days has passed; buy a new policy');
     const rq = renewalQuote(p);
-    const payment = await ctx.services.payments.charge({ purpose: 'RENEWAL', referenceId: p.id, policyId: p.id, total: rq.premium, token, actorId: user.id });
-    db.run("UPDATE policies SET end_date = ?, premium = ?, status = 'ACTIVE', version = version + 1 WHERE id = ?", rq.newEndDate, rq.premium, p.id);
-    const doc = renderPolicyPdf(p.id);
-    const invoice = ctx.services.payments.generateInvoice(payment.paymentId, { customerId: p.customer_id, policyNumber: p.policy_number, description: `Renewal premium until ${rq.newEndDate}` });
-    audit.record(user.id, 'POLICY_RENEWED', 'policy', p.id, { newEndDate: rq.newEndDate, paymentId: payment.paymentId });
-    ctx.services.notifications.notifyCustomer(p.customer_id, 'POLICY_RENEWED', `Policy ${p.policy_number} renewed until ${rq.newEndDate}.`);
-    return { policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)), payment, documentId: doc.id, invoiceDocumentId: invoice.id };
+    return ctx.services.payments.withPaymentLock(`policy:${p.id}`, async () => {
+      const payment = await ctx.services.payments.charge({ purpose: 'RENEWAL', referenceId: p.id, policyId: p.id, total: rq.premium, token, actorId: user.id });
+      db.run("UPDATE policies SET end_date = ?, premium = ?, status = 'ACTIVE', version = version + 1 WHERE id = ?", rq.newEndDate, rq.premium, p.id);
+      const doc = renderPolicyPdf(p.id);
+      const invoice = ctx.services.payments.generateInvoice(payment.paymentId, { customerId: p.customer_id, policyNumber: p.policy_number, description: `Renewal premium until ${rq.newEndDate}` });
+      audit.record(user.id, 'POLICY_RENEWED', 'policy', p.id, { newEndDate: rq.newEndDate, paymentId: payment.paymentId });
+      ctx.services.notifications.notifyCustomer(p.customer_id, 'POLICY_RENEWED', `Policy ${p.policy_number} renewed until ${rq.newEndDate}.`);
+      return { policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)), payment, documentId: doc.id, invoiceDocumentId: invoice.id };
+    });
   }
 
-  function endorse(policyId, changes, user) {
-    const p = getAccessible(user, policyId);
+  // A higher sum insured is charged before the change applies; a lower one is
+  // refunded after it (DEF-09). Runs under the policy's payment lock so it
+  // cannot interleave with a renewal or another endorsement.
+  async function endorse(policyId, body, user) {
+    const { paymentToken, ...changes } = body || {};
+    const { id } = getAccessible(user, policyId);
+    return ctx.services.payments.withPaymentLock(`policy:${id}`, () => applyEndorsement(id, changes, paymentToken, user));
+  }
+
+  async function applyEndorsement(policyId, changes, paymentToken, user) {
+    const p = db.get('SELECT * FROM policies WHERE id = ?', policyId);
     if (p.status !== 'ACTIVE') throw conflict('NOT_ACTIVE', 'Only active policies can be endorsed');
-    const keys = Object.keys(changes || {}).filter((k) => changes[k] !== undefined && changes[k] !== '');
+    const keys = Object.keys(changes).filter((k) => changes[k] !== undefined && changes[k] !== '');
     if (!keys.length) throw badRequest(`Provide at least one of: ${ENDORSABLE.join(', ')}`);
     const unknown = keys.filter((k) => !ENDORSABLE.includes(k));
     if (unknown.length) throw badRequest(`Cannot endorse field(s): ${unknown.join(', ')}`);
@@ -111,17 +131,13 @@ module.exports = function policiesModule(ctx) {
     const previous = {};
     const next = {};
     let premiumAdjustment = 0;
-    if (changes.nominee !== undefined) {
-      const v = String(changes.nominee).trim();
-      if (v.length < 2 || v.length > 100) throw badRequest('nominee must be 2-100 characters');
-      previous.nominee = p.nominee; next.nominee = v;
+    if (keys.includes('nominee')) {
+      previous.nominee = p.nominee; next.nominee = parseText(changes.nominee, 'nominee', 2, 100);
     }
-    if (changes.address !== undefined) {
-      const v = String(changes.address).trim();
-      if (v.length < 5 || v.length > 300) throw badRequest('address must be 5-300 characters');
-      previous.address = p.address; next.address = v;
+    if (keys.includes('address')) {
+      previous.address = p.address; next.address = parseText(changes.address, 'address', 5, 300);
     }
-    if (changes.sumInsured !== undefined) {
+    if (keys.includes('sumInsured')) {
       const si = parseNumber(changes.sumInsured);
       const customer = db.get('SELECT dob, income FROM customers WHERE id = ?', p.customer_id);
       if (!Number.isFinite(si) || si < 50_000) throw badRequest('sumInsured must be at least 50,000');
@@ -132,6 +148,15 @@ module.exports = function policiesModule(ctx) {
       const remaining = Math.max(0, daysBetween(today(), p.end_date)) / 365;
       premiumAdjustment = round2((annual(si) - annual(p.sum_insured)) * remaining);
       previous.sumInsured = p.sum_insured; next.sumInsured = si;
+    }
+
+    const payments = ctx.services.payments;
+    let payment = null;
+    if (premiumAdjustment > 0) {
+      if (!paymentToken) {
+        throw new ApiError(402, 'PAYMENT_REQUIRED', `This change costs ${inr(premiumAdjustment)}; send a paymentToken to pay for it`, { premiumAdjustment });
+      }
+      payment = await payments.charge({ purpose: 'ENDORSEMENT', referenceId: p.id, policyId: p.id, total: premiumAdjustment, token: paymentToken, actorId: user.id });
     }
 
     const endorsementId = newId('E');
@@ -146,9 +171,58 @@ module.exports = function policiesModule(ctx) {
       );
     });
     renderPolicyPdf(p.id);
-    audit.record(user.id, 'POLICY_ENDORSED', 'policy', p.id, { endorsementId, fields: Object.keys(next), previous, changes: next, premiumAdjustment });
+
+    const money = {};
+    if (payment) {
+      const invoice = payments.generateInvoice(payment.paymentId, {
+        customerId: p.customer_id, policyNumber: p.policy_number,
+        description: `Endorsement: sum insured ${inr(previous.sumInsured)} to ${inr(next.sumInsured)}, rest of the period`,
+      });
+      Object.assign(money, { paymentId: payment.paymentId, invoiceDocumentId: invoice.id });
+    } else if (premiumAdjustment < 0) {
+      const refund = await payments.refund({ policyId: p.id, amount: -premiumAdjustment, reason: 'Endorsement: sum insured reduced', actorId: user.id });
+      money.refundId = refund.refundId;
+    }
+
+    audit.record(user.id, 'POLICY_ENDORSED', 'policy', p.id, { endorsementId, fields: Object.keys(next), previous, changes: next, premiumAdjustment, ...money });
     ctx.services.notifications.notifyCustomer(p.customer_id, 'POLICY_ENDORSED', `Policy ${p.policy_number} was updated (${Object.keys(next).join(', ')}).`);
-    return { endorsementId, premiumAdjustment, policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)) };
+    return { endorsementId, premiumAdjustment, ...money, policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)) };
+  }
+
+  // Premium paid for cover that is still unused on `asOf` (DEF-10).
+  // - The current period's premium is pro-rated over that period only.
+  // - If the policy was renewed early, the previous period's unused days come
+  //   from the premium actually paid for that period.
+  // - Endorsement top-ups (+) and refunds (-) are pro-rated over the days
+  //   they covered.
+  function unusedPremium(p, asOf) {
+    const endPlus = addDays(p.end_date, 1); // cover runs through end_date inclusive
+    const later = (a, b) => (a > b ? a : b);
+    const periodStartFor = (endInclusive) => later(p.start_date, addDays(addYears(endInclusive, -p.term), 1));
+    // Unused share of `amount`, which paid for cover from `from` up to (not including) `to`.
+    const unused = (amount, from, to) => {
+      const total = daysBetween(from, to);
+      return total > 0 ? (amount * Math.min(total, Math.max(0, daysBetween(later(asOf, from), to)))) / total : 0;
+    };
+
+    const periodStart = periodStartFor(p.end_date);
+    let sum = unused(p.premium, periodStart, endPlus);
+
+    if (asOf < periodStart) {
+      const previousPayment = db.all(
+        "SELECT amount FROM payments WHERE policy_id = ? AND status = 'CAPTURED' AND purpose IN ('NEW_POLICY', 'RENEWAL') ORDER BY rowid DESC LIMIT 2",
+        p.id,
+      )[1];
+      if (previousPayment) sum += unused(previousPayment.amount, periodStartFor(addDays(periodStart, -1)), periodStart);
+    }
+
+    const lastRenewal = db.get("SELECT MAX(created_at) AS at FROM payments WHERE policy_id = ? AND purpose = 'RENEWAL' AND status = 'CAPTURED'", p.id)?.at;
+    for (const e of db.all('SELECT premium_adjustment, created_at FROM endorsements WHERE policy_id = ? AND premium_adjustment != 0', p.id)) {
+      // An endorsement made before the latest renewal only covered the old period.
+      const coveredTo = lastRenewal && e.created_at < lastRenewal ? periodStart : endPlus;
+      sum += unused(e.premium_adjustment, e.created_at.slice(0, 10), coveredTo);
+    }
+    return Math.max(0, sum);
   }
 
   // Policy cancellation (IWA-F-014): refunds the unexpired portion of the
@@ -156,14 +230,12 @@ module.exports = function policiesModule(ctx) {
   async function cancel(policyId, { reason }, user) {
     const p = getAccessible(user, policyId);
     if (p.status !== 'ACTIVE') throw conflict('NOT_ACTIVE', `Policy is ${p.status}; only active policies can be cancelled`);
-    const endPlus = addDays(p.end_date, 1); // cover runs through end_date inclusive
-    const totalDays = daysBetween(p.start_date, endPlus);
-    const remainingDays = daysBetween(today(), endPlus);
+    const remainingDays = daysBetween(today(), addDays(p.end_date, 1)); // cover runs through end_date inclusive
     if (remainingDays <= 0) throw conflict('ALREADY_EXPIRED', 'Policy has already expired');
     const reasonText = String(reason || '').trim();
     if (reasonText && (reasonText.length < 3 || reasonText.length > 500)) throw badRequest('reason must be 3-500 characters');
 
-    const grossRefund = round2((p.premium * remainingDays) / totalDays);
+    const grossRefund = round2(unusedPremium(p, today()));
     const fee = round2(grossRefund * (config.cancellationFeePercent / 100));
     const refundAmount = round2(Math.max(0, grossRefund - fee));
 
@@ -195,7 +267,7 @@ module.exports = function policiesModule(ctx) {
         `Cancellation effective: ${today()}`,
         ...(reasonText ? [`Reason: ${reasonText}`] : []),
         { text: 'Refund', bold: true, gap: 8 },
-        `Pro-rata refund (${remainingDays} of ${totalDays} day(s)): ${inr(grossRefund)}`,
+        `Unused premium (${remainingDays} day(s) of cover left): ${inr(grossRefund)}`,
         `Cancellation charge (${config.cancellationFeePercent}%): ${inr(fee)}`,
         { text: `Net refund: ${inr(refundAmount)}`, bold: true },
         'The refund will be credited to the original payment method within 5-7 business days.',
@@ -277,9 +349,9 @@ module.exports = function policiesModule(ctx) {
     res.json(await renew(req.params.id, req.body.paymentToken, req.user));
   }));
 
-  router.post('/:id/endorse', requireRole('CUSTOMER', 'AGENT', 'ADMIN'), (req, res) => {
-    res.json(endorse(req.params.id, req.body || {}, req.user));
-  });
+  router.post('/:id/endorse', requireRole('CUSTOMER', 'AGENT', 'ADMIN'), ah(async (req, res) => {
+    res.json(await endorse(req.params.id, req.body || {}, req.user));
+  }));
 
   router.post('/:id/cancel', requireRole('CUSTOMER', 'AGENT', 'ADMIN'), ah(async (req, res) => {
     res.json(await cancel(req.params.id, req.body || {}, req.user));
