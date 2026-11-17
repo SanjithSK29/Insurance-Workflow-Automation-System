@@ -47,6 +47,16 @@ Run in Docker:
 docker build -t iwas . && docker run -p 3000:3000 -v iwas-data:/data iwas
 ```
 
+The container keeps its database on the `iwas-data` volume, so set fixed keys or the data will be unreadable after a restart (the server prints a warning if they are missing):
+
+```bash
+docker run -p 3000:3000 -v iwas-data:/data \
+  -e DATA_KEY=<64 hex chars> -e JWT_SECRET=<any long random string> \
+  -e SIGNING_KEY_PEM="$(cat signing-key.pem)" iwas
+```
+
+Generate a `DATA_KEY` with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and an Ed25519 signing key with `openssl genpkey -algorithm ed25519 -out signing-key.pem`.
+
 ## What it does
 
 | Area | Features | SRS |
