@@ -82,7 +82,7 @@ describe('Numeric inputs through the API', () => {
     const row = t.ctx.db.get('SELECT sum_insured FROM policies WHERE id = ?', policy.policyId);
     assert.equal(row.sum_insured, 500000, 'cover unchanged');
     assert.equal(t.ctx.db.get('SELECT COUNT(*) AS n FROM endorsements WHERE policy_id = ?', policy.policyId).n, 0, 'no endorsement recorded');
-    const ok = await t.call('POST', `/policies/${policy.policyId}/endorse`, { token: c.token, body: { sumInsured: '600000' } });
+    const ok = await t.call('POST', `/policies/${policy.policyId}/endorse`, { token: c.token, body: { sumInsured: '600000', paymentToken: 'tok_success' } }); // raises are paid for (DEF-09)
     assert.equal(ok.status, 200);
     assert.equal(ok.body.policy.sumInsured, 600000);
     assert.ok(ok.body.premiumAdjustment > 0, 'raising cover charges extra premium');
