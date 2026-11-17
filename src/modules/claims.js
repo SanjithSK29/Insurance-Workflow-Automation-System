@@ -2,7 +2,7 @@
 // checks, BPMN approval routing, settlement and claimant notifications.
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
-const { ah, today, isIsoDate, round2, parseJson } = require('../core/util');
+const { ah, today, isIsoDate, round2, parseJson, parseNumber } = require('../core/util');
 const { requireRole } = require('../security/middleware');
 const { detectFraud } = require('./fraud');
 const { computeSettlement } = require('./settlement');
@@ -21,16 +21,6 @@ const ALLOWED_MIME = {
 };
 const MAX_DOCS = 10;
 const WORKFLOW_KEY = 'claim-approval';
-
-// Money from a JSON body: a finite number, or a plain decimal string such as
-// "1500" or "1500.50". Number() alone would turn true into 1, [5] into 5 and
-// "0x10" into 16 (DEF-03). Returns NaN for anything else.
-const DECIMAL_RE = /^\d+(\.\d+)?$/;
-function parseAmount(v) {
-  if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
-  if (typeof v === 'string' && DECIMAL_RE.test(v.trim())) return Number(v.trim());
-  return NaN;
-}
 
 const STATUS_MESSAGES = {
   REGISTERED: (c) => `Claim ${c.id} has been registered. We will keep you updated.`,
@@ -96,7 +86,7 @@ module.exports = function claimsModule(ctx) {
     if (!CLAIM_TYPES[policy.coverage_type].includes(claimType)) {
       throw unprocessable('INVALID_CLAIM', `claimType must be one of ${CLAIM_TYPES[policy.coverage_type].join(', ')} for ${policy.coverage_type} policies`);
     }
-    const amount = parseAmount(body.amount);
+    const amount = parseNumber(body.amount);
     if (!Number.isFinite(amount) || amount <= 0) throw unprocessable('INVALID_CLAIM', 'amount must be a positive number');
     if (!isIsoDate(body.incidentDate)) throw unprocessable('INVALID_CLAIM', 'incidentDate must be YYYY-MM-DD');
     if (body.incidentDate > today()) throw unprocessable('INVALID_CLAIM', 'incidentDate cannot be in the future');
@@ -277,7 +267,7 @@ module.exports = function claimsModule(ctx) {
     const { outcome, approvedAmount, comment } = req.body || {};
     const variables = {};
     if (approvedAmount !== undefined && approvedAmount !== null && approvedAmount !== '') {
-      const amt = parseAmount(approvedAmount);
+      const amt = parseNumber(approvedAmount);
       if (!Number.isFinite(amt) || amt < 0 || amt > claim.amount) throw badRequest('approvedAmount must be between 0 and the claimed amount');
       variables.approvedAmount = round2(amt);
     }

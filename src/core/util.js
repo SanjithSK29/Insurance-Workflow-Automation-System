@@ -30,6 +30,17 @@ const isIsoDate = (s) => {
   return !Number.isNaN(d.getTime()) && isoDate(d) === s;
 };
 
+// A number from a JSON body: a finite number, or a plain decimal string such
+// as "1500", "-3" or "1500.50" (what HTML number inputs send). Anything else
+// returns NaN. Number() alone would turn true into 1, [5] into 5, "" into 0
+// and "0x10" into 16 (DEF-03..07), so callers' range checks never saw them.
+const DECIMAL_RE = /^-?\d+(\.\d+)?$/;
+const parseNumber = (v) => {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+  if (typeof v === 'string' && DECIMAL_RE.test(v.trim())) return Number(v.trim());
+  return NaN;
+};
+
 // Wrap async route handlers so rejected promises reach the error handler.
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
@@ -41,4 +52,4 @@ const parseJson = (s, fallback = null) => {
   }
 };
 
-module.exports = { DAY_MS, round2, addDays, addYears, daysBetween, today, ageOn, isIsoDate, ah, parseJson, isoDate, toDate };
+module.exports = { DAY_MS, round2, addDays, addYears, daysBetween, today, ageOn, isIsoDate, parseNumber, ah, parseJson, isoDate, toDate };
