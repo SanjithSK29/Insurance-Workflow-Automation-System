@@ -73,6 +73,7 @@ Unit tests show that each module works. This report answers the system-level que
 | §5.1 RBAC bypass attempts | TC-RBAC-01, TC-Sec-Claim-01/02 (role matrix, forged and unsigned JWTs), TC-Claim-07, TC-WF-03, TC-Settle-08, TC-Notify-09 | P |
 | §5.1 Fuzzing of claim/quote inputs | TC-Quote-02, TC-Claim-02/03/05, TC-WF-03, TC-Sec-Trace-01, TC-Contract-05 (malformed JSON), TC-Sec-Claim-04 (SQL/script injection), TC-Sec-Claim-05 (path traversal), TC-Sec-Claim-06/07 (coerced amounts, DEF-03), TC-Date-02 (impossible dates, DEF-02) | P |
 | §5.1 Penetration testing (auth, workflow APIs) | Lockout, token revocation, OTP replay and workflow role checks automated; a full OWASP ZAP scan is still to do | P / M |
+| §5.1 PCI-DSS & GDPR compliance checks | Supported by design and partly tested: no card data is handled (sandbox payment tokens only), PII is encrypted at rest (TC-Sec-01) and masked (TC-Sec-PII-01). A formal checklist review has not been done. | M |
 
 ## 4. End-to-end scenarios
 
@@ -112,6 +113,7 @@ Server started with `PORT=3999 SEED_DEMO=true node src/server.js`:
 | Availability monitoring | NF-002 | Needs production hosting; out of scope for the course demo |
 | Accessibility audit (axe / Lighthouse) | NF-005 | Manual audit during UAT |
 | OWASP ZAP scan | STP §5.1 | Run against the Docker image during UAT |
+| PCI-DSS & GDPR checklist review | STP §5.1 | Walk through the checklists with the DevOps/Security owner during UAT |
 | User acceptance test with the team as business users | STP §5 | At the final demo |
 
 None of these block the core use cases.
