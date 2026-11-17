@@ -22,7 +22,13 @@ function ageOn(dob, on = today()) {
   return age;
 }
 
-const isIsoDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(toDate(s).getTime());
+// A real calendar date in YYYY-MM-DD form. Date silently rolls impossible
+// dates over (2026-02-30 -> 2026-03-02), so require the round trip to match.
+const isIsoDate = (s) => {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = toDate(s);
+  return !Number.isNaN(d.getTime()) && isoDate(d) === s;
+};
 
 // Wrap async route handlers so rejected promises reach the error handler.
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
