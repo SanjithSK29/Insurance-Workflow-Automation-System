@@ -3,7 +3,8 @@
 | | |
 | --- | --- |
 | Project | Insurance Workflow Automation System (IWAS) |
-| Document | Test Case Document, version 2.0 (updates the test cases in STP v1.0 §3 and §13) |
+| Document | Test Case Document, version 2.1 (updates the test cases in STP v1.0 §3 and §13) |
+| History | 2.0: 86 cases after the sprints (PR #9). 2.1: 114 cases, adds contract, security, defect-regression, settlement-letter and tracking cases (PR #10). |
 | Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241 |
 | Reviewed by | Samarth A (Developer Lead) |
 | Date | 17-11-2026 |
@@ -18,13 +19,17 @@ STP v1.0 (31-08-2025) listed 9 features to test and named 11 example test cases 
 | 1 | Sprint 1 and Sprint 2 implemented requirements beyond the STP §3 list: KYC (F-003), endorsement (F-012), invoices (F-013), settlement (F-023), notifications (F-024), admin BPMN designer (F-030), RBAC (F-031), dashboards (F-032), reports (F-033), audit log (F-034) and security requirements SR-001 to SR-005. | Test cases added for each (TC-KYC, TC-Endorse, TC-Invoice, TC-Settle, TC-Notify, TC-Admin, TC-RBAC, TC-Dash, TC-Report, TC-Audit, TC-Sec-*). |
 | 2 | Work merged after Sprint 2 (PRs #6–#8, 01-11 to 11-11-2026) added login hardening (lockout, TOTP replay protection, logout revocation), policy cancellation with pro-rata refund (F-014) and the renewals-due report. | TC-Sec-MFA-02, TC-Sec-Lock-01/02, TC-Sec-Revoke-01, TC-Sec-Trace-01, TC-Sec-Mig-01, TC-Cancel-01/02, TC-Renewal-Report-01..03. |
 | 3 | The stack changed from the STP §6 assumption (Java/JUnit/Jest, PostgreSQL, Kafka, Camunda) to Node.js, SQLite, an in-process event bus and an in-house BPMN engine. | All automated tests use Node's built-in runner (`node:test`). API tests start the real Express app on a random port and call it over HTTP, so they are integration/system tests, not mocks. |
-| 4 | Testing of the QA Lead's modules (claims, fraud, settlement, notifications) showed weak branch coverage (73.95 %, 73.33 %, 66.66 %, 77.77 %). | 35 test cases added in three new files (section 4.6–4.8). Branch coverage of these modules is now 96.18 %, 100 %, 100 %, 100 %. |
+| 4 | Testing of the QA Lead's modules (claims, fraud, settlement, notifications) showed weak branch coverage (73.95 %, 73.33 %, 66.66 %, 77.77 %). | 35 test cases added in three new files (sections 3.6–3.8). |
 | 5 | Testing clarified that remaining cover is reduced by the amount **paid**, not the amount claimed. | TC-Settle-04 and TC-Settle-09 pin this behaviour (see RTM, "Clarified behaviour"). |
+| 6 | The SAD (§4.3.2 Claim API, §4.4 error envelope) and STP §5.1 (RBAC bypass, fuzzing) had no direct test cases for the claims module, and the "Track Claim Status" use case (SRS §7.1) had none. | Contract, security, settlement-letter and tracking test cases added (sections 3.10, 3.12–3.14). |
+| 7 | Testing found three defects (DEF-01 server crash on unreadable contact details, DEF-02 impossible dates accepted, DEF-03 coerced amounts). Each got a failing test first, then a fix. | Sections 3.9 and 3.11, and TC-Sec-Claim-06/07; see [DEFECT_LOG.md](reports/DEFECT_LOG.md). |
+
+After all changes: **114 test cases in 16 files**. Branch coverage of the QA Lead's modules: claims 96.10 %, fraud 100 %, settlement 100 %, notifications 100 %.
 
 ## 2. Conventions
 
 - **Level:** U = unit (function called directly), I = integration (module through the HTTP API with a real database), S = system (end-to-end business flow across several modules).
-- **Status** is the result of the run on 17-11-2026: P = passed. All 86 automated cases passed.
+- **Status** is the result of the run on 17-11-2026: P = passed. All 114 automated cases passed.
 - Every API test runs against an isolated in-memory database created by `test/helpers.js`, with one user per role (ADMIN, UNDERWRITER, ADJUSTER, AGENT, CUSTOMER) and synthetic customer data (STP §6 "Test Data").
 - Run everything with `npm test`; run with coverage with `npm run test:coverage`.
 
@@ -156,6 +161,64 @@ STP v1.0 (31-08-2025) listed 9 features to test and named 11 example test cases 
 | TC-Notify-08 | F-024, F-021 | I | Broadcast to a role; notify one user | Only active users with the role; single in-app row | P |
 | TC-Notify-09 | F-024, F-031 | I | Inbox and mark as read | Only own in-app messages; cannot mark others' (404); 401 without login | P |
 
+### 3.9 Notification resilience, DEF-01 (new) — `test/notifications-resilience.test.js`
+
+| ID | Req | Level | Test case | Expected result | Status |
+| --- | --- | --- | --- | --- | --- |
+| TC-Notify-10 | F-024, NF-002 | I | Customer's email was encrypted with another key (as after a restart without DATA_KEY) | `notifyCustomer` resolves; in-app DELIVERED; email FAILED | P (failed before fix) |
+| TC-Notify-11 | F-020, NF-002 | S | Same customer files a claim | 201; no unhandled promise rejections; server still answers `/health` | P (failed before fix) |
+| TC-Notify-12 | F-020..024 | S | Notification service throws (sync and async) during a full claim lifecycle | Claim still registered, approved and settled; each failure logged | P |
+
+### 3.10 Claims API contract, SAD §4.3.2 and §4.4 (new) — `test/claims-contract.test.js`
+
+| ID | Req | Level | Test case | Expected result | Status |
+| --- | --- | --- | --- | --- | --- |
+| TC-Contract-01 | SAD 4.3.2, F-020 | I | `POST /api/v1/claim` (SAD path) | 201, claim ID, ETA "5 days"; status UNDER_REVIEW (documented deviation); REGISTERED first in timeline | P |
+| TC-Contract-02 | SAD 4.3.2 | I | No token, invalid token, unknown policy P456, negative amount | 401, 401, 404, 422 with SAD envelope | P |
+| TC-Contract-03 | SAD 4.4 | I | 404, 403, 400, 409, 400 errors on claim routes | Every error has `code`, `message`, `traceId` = `X-Trace-Id` header | P |
+| TC-Contract-04 | SAD 4.4 | I | Client sends `X-Trace-Id` | Same id echoed in header and error body | P |
+| TC-Contract-05 | SAD 4.4, STP 5.1 | I | Malformed JSON body | 400 INVALID_INPUT "Malformed JSON", not 500 | P |
+
+### 3.11 Date validation, DEF-02 (new) — `test/date-validation.test.js`
+
+| ID | Req | Level | Test case | Expected result | Status |
+| --- | --- | --- | --- | --- | --- |
+| TC-Date-01 | F-020, F-003 | U | Real dates incl. 2024-02-29 | Accepted | P |
+| TC-Date-02 | F-020, F-003 | U | 2026-02-30, 2026-02-31, 2026-04-31, 2026-06-31, 2025-02-29, 1900-02-29 | Rejected (no roll-over to next month) | P (failed before fix) |
+| TC-Date-03 | F-020 | U | Wrong formats and types | Rejected | P |
+| TC-Claim-11 | F-020 | I | Claim with incident date 2026-02-30 | 422 INVALID_CLAIM | P (failed before fix) |
+
+### 3.12 Claims security, STP §5.1 (new) — `test/claims-security.test.js`
+
+| ID | Req | Level | Test case | Expected result | Status |
+| --- | --- | --- | --- | --- | --- |
+| TC-Sec-Claim-01 | F-031, STP 5.1 | I | RBAC matrix: 6 actors × 5 claim actions (30 checks) | Only the owner files/views/uploads; only the adjuster decides and settles; staff view | P |
+| TC-Sec-Claim-02 | F-031, SR-002 | I | No token, role-forged JWT, unsigned JWT, garbage on 4 claim routes | 401 everywhere | P |
+| TC-Sec-Claim-03 | SR-003 | I | Claimant views own claim | No fraud score, flags or internal tasks | P |
+| TC-Sec-Claim-04 | STP 5.1 | I | SQL/script/template injection in description, policy id, claim type, claim id, status filter | Stored as text / 404 / 422 / empty result; table intact | P |
+| TC-Sec-Claim-05 | STP 5.1 | I | Filenames `../../etc/passwd.pdf`, CR/LF, backslash | No path separators or line breaks stored | P |
+| TC-Sec-Claim-06 | F-020, STP 5.1 | I | Amount `true`, `[5]`, `"0x10"`, `{}`, `null`, blank, `"1e400"`, `"NaN"`, −5 | 422; numbers and decimal strings still accepted | P (failed before DEF-03 fix) |
+| TC-Sec-Claim-07 | F-021 | I | Approved amount `true`, `[100]`, `"0x10"` | 400; `"4000"` accepted | P (failed before DEF-03 fix) |
+
+### 3.13 Signed settlement letter, SR-005 (new) — `test/settlement-letter.test.js`
+
+| ID | Req | Level | Test case | Expected result | Status |
+| --- | --- | --- | --- | --- | --- |
+| TC-Settle-10 | F-023 | S | Download letter for a 90,000 health claim on 100,000 cover | PDF states claim id, 90,000.00, 5,000.00, 8,500.00, 76,500.00 and payout reference | P |
+| TC-Settle-11 | SR-005 | I | Verify with only the published public key | Ed25519 signature valid; SHA-256 header matches | P |
+| TC-Settle-12 | SR-005, SAD 3.9 (tampering) | I | Change 76,500.00 to 96,500.00 in the stored letter | Signature and integrity checks fail | P |
+| TC-Settle-13 | F-031 | I | Download as stranger, agent, adjuster | 403, 403, 200 | P |
+
+### 3.14 Track Claim Status use case, SRS §7.1 (new) — `test/claim-tracking.test.js`
+
+| ID | Req | Level | Test case | Expected result | Status |
+| --- | --- | --- | --- | --- | --- |
+| TC-Track-01 | F-024, SRS 7.1 | S | Timeline after settlement | REGISTERED → UNDER_REVIEW → APPROVED → SETTLED, in time order | P |
+| TC-Track-02 | F-024 | S | Message text | Each names the claim; approval and settlement state INR 31500 for a 40,000 health claim | P |
+| TC-Track-03 | F-024 | S | Rejected claim | Claimant told to contact support; no settlement | P |
+| TC-Track-04 | F-021, F-024 | S | New claim | Adjuster group gets "New task 'Adjuster review' for claim …" | P |
+| TC-Track-05 | F-024 | S | Email vs in-app | One email per in-app status message (4 each) | P |
+
 ## 4. Manual and environment-dependent checks
 
 | ID | Req | Check | Result on 17-11-2026 |
@@ -164,5 +227,5 @@ STP v1.0 (31-08-2025) listed 9 features to test and named 11 example test cases 
 | TC-Smoke-02 | SR-001, STP 5.1 | Response headers on the running server | HSTS, CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` present |
 | TC-Smoke-03 | F-031 | `GET /api/v1/claims` without a token; `POST /api/v1/quote` with empty body | 401; 400 |
 | TC-UX-01 | NF-005 | WCAG 2.1 AA audit (axe / Lighthouse) | Not run yet: planned for UAT |
-| TC-Perf-02 | NF-001 | k6 load test `perf/quote-load.js` against a deployed environment | Not run yet: needs a deployed environment |
+| TC-Perf-02 | NF-001 | k6 load test `perf/quote-load.js` (quote and claim-status APIs, p95 < 2 s each) against a deployed environment | Script ready; setup flow checked against a running instance; not run yet: needs a deployed environment |
 | TC-Sec-ZAP-01 | STP 5.1 | OWASP ZAP scan | Not run yet: CI runs CodeQL, gitleaks and `npm audit` instead |
