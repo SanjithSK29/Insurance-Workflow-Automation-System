@@ -82,6 +82,19 @@
 
 **Commits:** tests `96194e9`, fix `39a84cf`.
 
+### DEF-04 to DEF-07: the same number coercion in other modules
+
+After DEF-03, the QA Lead reviewed every module for the same `Number()` coercion and confirmed each case against a running instance. All four were fixed with one shared helper, `parseNumber()` in `src/core/util.js` (finite numbers and plain decimal strings only). Commit `6d22d62` added the helper and moved the claims fix onto it.
+
+| ID | Severity | Module (owner) | Requirement | Wrong behaviour seen | Test | Fix commit |
+| --- | --- | --- | --- | --- | --- | --- |
+| DEF-04 | Low | `quotes.js` (Sanjith) | IWA-F-001 | `age: [30]`, `income: "0x10000"` (read as 65,536), `term: true`, `sumInsured: [100000]` produced quotes | TC-Quote-06/07 | `1fc091a` |
+| DEF-05 | Medium | `customers.js` (Sanjith) | IWA-F-003, F-002 | `income: true` stored as 1 and `""` / `null` as 0; income drives underwriting and the maximum sum insured | TC-KYC-03/04 | `8a81a44` |
+| DEF-06 | Medium | `policies.js` (Samarth) | IWA-F-012 | Endorsing `sumInsured: "0x10000"` cut the cover from 5,00,000 to 65,536 and issued a premium refund of 11,963.55; `[700000]` accepted | TC-Endorse-02 | `40b2343` |
+| DEF-07 | Medium | `admin.js` (Sampreeth) | IWA-F-002 | Risk threshold `value: true` was stored as 1, which would send almost every application to manual review; `""` / `null` stored as 0 | TC-Admin-02 | `98747b8` |
+
+**Expected for all four:** 400 `INVALID_INPUT` with the field's existing message, and no data changed. **Status:** fixed and verified; numbers and numeric strings (what the web UI sends) behave exactly as before, and each owner's existing tests still pass. Branch `vishal-input-validation` (PR #11).
+
 ## 3. Observations (not defects)
 
 | ID | Observation | Decision |
@@ -96,9 +109,9 @@
 
 | Metric | Value |
 | --- | --- |
-| Defects found this cycle | 3 (High 1, Medium 1, Low 1) |
-| Defects fixed and verified | 3 |
+| Defects found this cycle | 7 (High 1, Medium 4, Low 2) |
+| Defects fixed and verified | 7 |
 | Open defects | 0 (0 critical) |
 | Defect aging | All fixed on the day they were found (17-11-2026) |
-| Defect density | 3 defects in 488 lines (claims, fraud, settlement, notifications, util) ≈ 6.1 defects per KLOC |
-| Regression | Full suite re-run after every fix: 114 / 114 passing at the end of the cycle |
+| Defect density | QA Lead's modules: 3 defects in 489 lines ≈ 6.1 per KLOC. All modules touched: 7 defects in 1,295 lines (claims, fraud, settlement, notifications, util, quotes, customers, policies, admin) ≈ 5.4 per KLOC |
+| Regression | Full suite re-run after every fix: 122 / 122 passing at the end of the cycle |
