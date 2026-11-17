@@ -3,8 +3,8 @@
 | | |
 | --- | --- |
 | Project | Insurance Workflow Automation System (IWAS) |
-| Document | Test Case Document, version 2.1 (updates the test cases in STP v1.0 §3 and §13) |
-| History | 2.0: 86 cases after the sprints (PR #9). 2.1: 114 cases, adds contract, security, defect-regression, settlement-letter and tracking cases (PR #10). |
+| Document | Test Case Document, version 2.2 (updates the test cases in STP v1.0 §3 and §13) |
+| History | 2.0: 86 cases after the sprints (PR #9). 2.1: 114 cases, adds contract, security, defect-regression, settlement-letter and tracking cases (PR #10). 2.2: 122 cases, adds numeric-input cases for DEF-04..07 (PR #11). |
 | Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241 |
 | Reviewed by | Samarth A (Developer Lead) |
 | Date | 17-11-2026 |
@@ -23,13 +23,14 @@ STP v1.0 (31-08-2025) listed 9 features to test and named 11 example test cases 
 | 5 | Testing clarified that remaining cover is reduced by the amount **paid**, not the amount claimed. | TC-Settle-04 and TC-Settle-09 pin this behaviour (see RTM, "Clarified behaviour"). |
 | 6 | The SAD (§4.3.2 Claim API, §4.4 error envelope) and STP §5.1 (RBAC bypass, fuzzing) had no direct test cases for the claims module, and the "Track Claim Status" use case (SRS §7.1) had none. | Contract, security, settlement-letter and tracking test cases added (sections 3.10, 3.12–3.14). |
 | 7 | Testing found three defects (DEF-01 server crash on unreadable contact details, DEF-02 impossible dates accepted, DEF-03 coerced amounts). Each got a failing test first, then a fix. | Sections 3.9 and 3.11, and TC-Sec-Claim-06/07; see [DEFECT_LOG.md](reports/DEFECT_LOG.md). |
+| 8 | A review of the other modules found the DEF-03 coercion in quotes, customer income, endorsements and the admin risk threshold (DEF-04..07). | Section 3.15 (TC-Num, TC-Quote-06/07, TC-KYC-03/04, TC-Endorse-02, TC-Admin-02). |
 
-After all changes: **114 test cases in 16 files**. Branch coverage of the QA Lead's modules: claims 96.10 %, fraud 100 %, settlement 100 %, notifications 100 %.
+After all changes: **122 test cases in 17 files**. Branch coverage of the QA Lead's modules: claims 96.55 %, fraud 100 %, settlement 100 %, notifications 100 %.
 
 ## 2. Conventions
 
 - **Level:** U = unit (function called directly), I = integration (module through the HTTP API with a real database), S = system (end-to-end business flow across several modules).
-- **Status** is the result of the run on 17-11-2026: P = passed. All 114 automated cases passed.
+- **Status** is the result of the run on 17-11-2026: P = passed. All 122 automated cases passed.
 - Every API test runs against an isolated in-memory database created by `test/helpers.js`, with one user per role (ADMIN, UNDERWRITER, ADJUSTER, AGENT, CUSTOMER) and synthetic customer data (STP §6 "Test Data").
 - Run everything with `npm test`; run with coverage with `npm run test:coverage`.
 
@@ -218,6 +219,19 @@ After all changes: **114 test cases in 16 files**. Branch coverage of the QA Lea
 | TC-Track-03 | F-024 | S | Rejected claim | Claimant told to contact support; no settlement | P |
 | TC-Track-04 | F-021, F-024 | S | New claim | Adjuster group gets "New task 'Adjuster review' for claim …" | P |
 | TC-Track-05 | F-024 | S | Email vs in-app | One email per in-app status message (4 each) | P |
+
+### 3.15 Numeric inputs across modules, DEF-04..07 (new) — `test/numeric-input.test.js`
+
+| ID | Req | Level | Test case | Expected result | Status |
+| --- | --- | --- | --- | --- | --- |
+| TC-Num-01 | STP 5.1 | U | `parseNumber()` with numbers and decimal strings (5, "5", " 7 ", "-3", "1500.50") | Parsed to the same number | P |
+| TC-Num-02 | STP 5.1 | U | `true`, `[5]`, `{}`, `null`, `""`, `"0x10"`, `"1e5"`, `"1,500"`, Infinity | NaN (rejected) | P |
+| TC-Quote-06 | F-001 | I | Quote with `age: [30]` / `true`, `income: "0x10000"` / `true`, `term: true` / `[2]`, `sumInsured: [100000]` / `"1e6"` | 400 INVALID_INPUT | P (failed before fix) |
+| TC-Quote-07 | F-001 | I | Same quote with numbers vs numeric strings; blank sum insured | Same premium; blank uses the product default | P |
+| TC-KYC-03 | F-003 | I | Customer profile income `true`, `""`, `" "`, `[500000]`, `"0x10000"`, `null`; then `"750000"` and `0` | 400 for each; numeric string and real 0 accepted | P (failed before fix) |
+| TC-KYC-04 | F-003 | I | Profile update with `income: true`; update without income | 400; stored income kept | P |
+| TC-Endorse-02 | F-012 | I | Endorse `sumInsured` `"0x10000"`, `[700000]`, `true`; then `"600000"` | 400 and cover/history unchanged; numeric string raises cover with extra premium | P (failed before fix) |
+| TC-Admin-02 | F-002 | I | Risk threshold `true`, `false`, `""`, `[70]`, `"0x40"`, `null`; then `"70"` | 400 and threshold unchanged; `"70"` saved | P (failed before fix) |
 
 ## 4. Manual and environment-dependent checks
 
