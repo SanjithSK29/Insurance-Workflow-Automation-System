@@ -84,16 +84,19 @@ Each module exposes a service API plus an Express router. Modules call each othe
 
 ### Differences from the documented stack
 
-The SAD proposes Java/Spring Boot microservices, Kafka, Camunda, PostgreSQL, Redis and S3. To keep the project runnable on a student laptop and in CI with a single `npm install`, this implementation uses:
+The SAD proposes a React/TypeScript front end, Java/Spring Boot microservices, Kafka, Camunda, PostgreSQL, Redis and S3. To keep the project runnable on a student laptop and in CI with a single `npm install`, this implementation uses:
 
 | SAD | This implementation | Upgrade path |
 | --- | --- | --- |
+| React 18 / TypeScript web UI (SRS §3.1, SAD §3.6) | Dependency-free single-page UI in plain JavaScript (`public/app.js`) with the same role-based screens, accessibility features and English/Hindi labels | Rebuild the screens as React components against the same `/api/v1` endpoints |
 | Spring Boot services | Node.js/Express modules with the same bounded contexts | Each `src/modules/*` router maps 1:1 to a service |
 | Kafka | In-process event bus with the same topics | Replace `src/core/events.js` with a Kafka client |
 | Camunda | Built-in BPMN 2.0 subset engine; reads Camunda's `candidateGroups` attribute | Deploy the same `.bpmn` files to Camunda |
 | PostgreSQL / Redis | SQLite via `node:sqlite` | Port the schema in `src/core/db.js` |
 | S3 | Documents table (same API: store / fetch / verify) | Swap storage in `src/modules/documents.js` |
 | KYC / payment / SMS / email vendors | Sandbox adapters with the same failure modes (outage, decline, timeout) | Replace the adapter objects |
+
+Requirement added after SRS v1.0: **IWA-F-014, policy cancellation with a pro-rata refund** (PR #8). It is traced in [docs/TRACEABILITY.md](docs/TRACEABILITY.md) and tested by TC-Cancel-01/02. Claims- and testing-specific deviations are in [docs/DEVIATIONS.md](docs/DEVIATIONS.md).
 
 ## API overview
 
