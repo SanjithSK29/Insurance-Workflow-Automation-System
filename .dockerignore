@@ -3,5 +3,7 @@ node_modules
 .github
 .claude
 test
+coverage
+.env
 *.pdf
 *.db
