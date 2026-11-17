@@ -176,9 +176,11 @@ module.exports = function paymentsModule(ctx) {
 
   router.get('/', (req, res) => {
     let rows;
-    if (req.user.role === 'CUSTOMER') {
+    if (req.user.role === 'CUSTOMER' || req.user.role === 'AGENT') {
+      // Customers see their own payments; agents see their portfolio's.
+      const owner = req.user.role === 'CUSTOMER' ? 'c.user_id' : 'c.agent_id';
       rows = db.all(`SELECT p.* FROM payments p LEFT JOIN applications a ON a.id = p.reference_id LEFT JOIN policies po ON po.id = p.policy_id
-        JOIN customers c ON c.id = COALESCE(a.customer_id, po.customer_id) WHERE c.user_id = ? ORDER BY p.created_at DESC`, req.user.id);
+        JOIN customers c ON c.id = COALESCE(a.customer_id, po.customer_id) WHERE ${owner} = ? ORDER BY p.created_at DESC`, req.user.id);
     } else if (['ADMIN', 'UNDERWRITER'].includes(req.user.role)) {
       rows = db.all('SELECT * FROM payments ORDER BY created_at DESC LIMIT 500');
     } else {
