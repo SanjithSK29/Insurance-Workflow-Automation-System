@@ -110,6 +110,29 @@ describe('Web UI accessibility (IWA-NF-005)', () => {
     assert.equal(doc.querySelector('#nav [aria-current=page]').textContent, 'Profile');
     window.close();
   });
+
+  test('TC-UX-05: Log out revokes the session token on the server, not just in the browser (DEF-14)', async () => {
+    const login = await fetch(`${origin}/api/v1/auth/login`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'agent@iwas.test', password: DEMO_PASSWORD }),
+    });
+    const { token } = await login.json();
+    const dom = new JSDOM(HTML, { url: `${origin}/`, runScripts: 'outside-only', pretendToBeVisual: true });
+    const { window } = dom;
+    window.fetch = (input, init) => fetch(new URL(input, origin), init);
+    window.Element.prototype.scrollIntoView = () => {};
+    window.sessionStorage.setItem('iwas.token', token);
+    window.eval(APP_JS);
+    await wait(300);
+
+    window.document.getElementById('logout').click();
+    await wait(300);
+    assert.ok(window.document.querySelector('input[name=email]'), 'back on the sign-in screen');
+    assert.equal(window.sessionStorage.getItem('iwas.token'), null);
+    const reuse = await fetch(`${origin}/api/v1/me`, { headers: { authorization: `Bearer ${token}` } });
+    assert.equal(reuse.status, 401, 'a copied token stops working after logout');
+    window.close();
+  });
 });
 
 // ---- colour contrast from the CSS custom properties -------------------------
