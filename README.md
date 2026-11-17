@@ -2,7 +2,7 @@
 
 A working implementation of the insurance platform specified in this repository's SRS, SAD and STP. It covers customer onboarding, quotes, underwriting, policies and claims settlement, with BPMN-driven approval workflows, role-based dashboards and an immutable audit trail.
 
-> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **51 tests, 51 passing** (`npm test`). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
+> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **86 tests, 86 passing** (`npm test`), 94.15 % statement and 80.07 % branch coverage. Test reports (unit, system validation, code coverage, branch coverage) are in [docs/reports](docs/reports/). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
 
 ## Quick start
 
@@ -38,6 +38,7 @@ Run the tests:
 
 ```bash
 npm test
+npm run test:coverage   # same tests plus a c8 coverage table and coverage/index.html
 ```
 
 Run in Docker:
@@ -140,7 +141,9 @@ The `security` job in the CI pipeline runs `npm audit` (fails on high or critica
 ├── Dockerfile
 ├── docs/
 │   ├── TRACEABILITY.md                     RTM: requirement → module → test → status
-│   └── WORK_SPLIT.md                       Team responsibilities
+│   ├── TEST_CASES.md                       Test Case Document (updated after the sprints)
+│   ├── WORK_SPLIT.md                       Team responsibilities
+│   └── reports/                            Unit, system validation, code and branch coverage reports
 ├── perf/quote-load.js                      k6 load script (TC-Perf-01 against a deployed env)
 ├── public/                                 Web UI (index.html, app.js, styles.css)
 ├── scripts/otp.js                          Prints TOTP codes for demo MFA accounts

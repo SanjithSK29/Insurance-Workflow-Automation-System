@@ -2,7 +2,8 @@
 
 This matrix updates SRS §8 and STP §13 with the implementation and test results.
 Status: **P** = passed, **A** = automated check in CI, **M** = manual / environment-dependent verification.
-Last run: `npm test` on Node.js 22: **51 tests, 51 passed, 0 failed**.
+Last run (17-11-2026): `npm test` on Node.js 25.2.0 (Windows 11) and Node.js 22 in CI: **86 tests, 86 passed, 0 failed**.
+Coverage (`npm run test:coverage`, c8 with `--all`): **94.15 % statements, 80.07 % branches, 93.01 % functions, 94.15 % lines**. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md).
 
 ## Functional requirements
 
@@ -16,11 +17,11 @@ Last run: `npm test` on Node.js 22: **51 tests, 51 passed, 0 failed**.
 | IWA-F-012 | Endorsement with audit trail | `policies.js` (`endorse`) | TC-Endorse-01 | policy.test.js | P |
 | IWA-F-013 | Invoice PDF with tax breakup | `payments.js` (`generateInvoice`) | TC-Invoice-01 | policy.test.js | P |
 | IWA-F-014 | Policy cancellation with pro-rata refund | `policies.js` (`cancel`), `payments.js` (`refund`), `documents.js` (cancellation letter) | TC-Cancel-01, TC-Cancel-02 | policy-cancellation.test.js | P |
-| IWA-F-020 | Claim registration with document upload (10 MB) | `src/modules/claims.js` | TC-Claim-01, TC-Claim-02 | claims-workflow.test.js | P |
-| IWA-F-021 | Configurable multi-level BPMN approval | `src/workflow/*`, `claim-approval.bpmn` | TC-WF-01, TC-WF-02 | claims-workflow.test.js | P |
-| IWA-F-022 | Automated fraud detection | `src/modules/fraud.js` | TC-Fraud-01 | claims-workflow.test.js | P |
-| IWA-F-023 | Settlement per policy terms | `src/modules/settlement.js`, `claims.js` (`settle`) | TC-Settle-01 | claims-workflow.test.js | P |
-| IWA-F-024 | Notify claimant at every status change | `src/modules/notifications.js`, `claims.js` | TC-Notify-01 | claims-workflow.test.js | P |
+| IWA-F-020 | Claim registration with document upload (10 MB) | `src/modules/claims.js` | TC-Claim-01 – TC-Claim-10 | claims-workflow.test.js, claims-edge-cases.test.js | P |
+| IWA-F-021 | Configurable multi-level BPMN approval | `src/workflow/*`, `claim-approval.bpmn` | TC-WF-01 – TC-WF-03 | claims-workflow.test.js, claims-edge-cases.test.js | P |
+| IWA-F-022 | Automated fraud detection | `src/modules/fraud.js` | TC-Fraud-01 – TC-Fraud-11 | claims-workflow.test.js, fraud-settlement.test.js | P |
+| IWA-F-023 | Settlement per policy terms | `src/modules/settlement.js`, `claims.js` (`settle`) | TC-Settle-01 – TC-Settle-09 | claims-workflow.test.js, fraud-settlement.test.js, claims-edge-cases.test.js | P |
+| IWA-F-024 | Notify claimant at every status change | `src/modules/notifications.js`, `claims.js` | TC-Notify-01 – TC-Notify-09 | claims-workflow.test.js, notifications.test.js | P |
 | IWA-F-030 | Admin UI to design and deploy BPMN | `workflow/engine.js` admin routes, `public/app.js` (Workflows) | TC-Admin-01, TC-WF-02 | admin-security.test.js | P |
 | IWA-F-031 | RBAC for all modules | `src/security/middleware.js`, per-module access checks | TC-RBAC-01 | admin-security.test.js | P |
 | IWA-F-032 | Dashboards load in under 3 s | `src/modules/admin.js` (`dashboard`) | TC-Dash-01 | admin-security.test.js | P |
@@ -52,12 +53,22 @@ Last run: `npm test` on Node.js 22: **51 tests, 51 passed, 0 failed**.
 | Retry with exponential backoff | performance-unit.test.js |
 | PDF writer validity (multi-page, xref offset) | performance-unit.test.js |
 | Actuarial outage → 503, quote reuse blocked, transient payment retry | quote-underwriting / policy tests |
+| Claims fallbacks: document type sniffing, filename sanitising, role-scoped listing, event consumers | claims-edge-cases.test.js |
+| Notification channel selection, provider outage and retry, role broadcast, inbox | notifications.test.js |
+
+## Clarified behaviour found during testing
+
+| Item | Behaviour | Test |
+| --- | --- | --- |
+| Remaining cover after a settlement | Reduced by the amount actually **paid** (after deductible and co-pay), not by the amount claimed. Example: sum insured 100,000; a 90,000 health claim pays 76,500, so 23,500 of cover remains and the next claim is capped at 23,500. | TC-Settle-04, TC-Settle-09 |
+| EXCEEDS_REMAINING_COVER on its own | Scores 30, below the flag threshold of 50, so it routes to fraud investigation only when another rule also fires (e.g. EARLY_CLAIM). | TC-Fraud-05, TC-Settle-09 |
+| Claims without documents | Accepted (evidence can be added later with `POST /claims/{id}/documents`) but scored NO_SUPPORTING_DOCUMENTS. | TC-Claim-06, TC-Claim-09 |
 
 ## STP exit criteria
 
 | Criterion (STP §5) | Result |
 | --- | --- |
-| 100 % of planned automated test cases executed | 51 / 51 executed |
+| 100 % of planned automated test cases executed | 86 / 86 executed, 86 passed |
 | 0 critical defects open | 0 open |
 | All high-priority acceptance criteria met | All high-priority F- and SR- requirements are P |
 | Items that need a deployed environment | NF-002 uptime, NF-005 accessibility audit, k6 load test, OWASP ZAP scan: planned for UAT |
