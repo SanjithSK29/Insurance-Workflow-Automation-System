@@ -1,0 +1,10 @@
+{
+  "all": true,
+  "src": ["src"],
+  "reporter": ["text", "html", "json-summary"],
+  "check-coverage": true,
+  "statements": 93,
+  "branches": 80,
+  "functions": 92,
+  "lines": 93
+}
