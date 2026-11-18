@@ -295,6 +295,24 @@ module.exports = function policiesModule(ctx) {
 
   // Policy cancellation (IWA-F-014): refunds the unexpired portion of the
   // premium on a pro-rata basis, less a configurable short-rate retention.
+  function cancellationQuote(p) {
+    if (p.status !== 'ACTIVE') throw conflict('NOT_ACTIVE', `Policy is ${p.status}; only active policies can be cancelled`);
+    const remainingDays = daysBetween(today(), addDays(p.end_date, 1));
+    if (remainingDays <= 0) throw conflict('ALREADY_EXPIRED', 'Policy has already expired');
+    const grossRefund = round2(unusedPremium(p, today()));
+    const fee = round2(grossRefund * (config.cancellationFeePercent / 100));
+    const refundAmount = round2(Math.max(0, grossRefund - fee));
+    return {
+      policyId: p.id,
+      policyNumber: p.policy_number,
+      grossRefund,
+      fee,
+      refundAmount,
+      remainingDays,
+      cancellationFeePercent: config.cancellationFeePercent,
+    };
+  }
+
   async function cancel(policyId, { reason }, user) {
     const p = getAccessible(user, policyId);
     if (p.status !== 'ACTIVE') throw conflict('NOT_ACTIVE', `Policy is ${p.status}; only active policies can be cancelled`);
@@ -411,6 +429,7 @@ module.exports = function policiesModule(ctx) {
   });
 
   router.get('/:id/renewal-quote', (req, res) => res.json(renewalQuote(getAccessible(req.user, req.params.id))));
+  router.get('/:id/cancellation-quote', (req, res) => res.json(cancellationQuote(getAccessible(req.user, req.params.id))));
 
     router.post('/:id/reinstate', requireRole('CUSTOMER', 'AGENT'), ah(async (req, res) => {
     res.json(await reinstate(req.params.id, req.body || {}, req.user));
@@ -429,5 +448,5 @@ module.exports = function policiesModule(ctx) {
     res.json(await cancel(req.params.id, req.body || {}, req.user));
   }));
 
-  return { issue, renew, reinstate, endorse, cancel, runRenewalReminders, getAccessible, present, router };
+  return { issue, renew, reinstate, endorse, cancel, cancellationQuote, runRenewalReminders, getAccessible, present, router };
 };
