@@ -350,6 +350,11 @@
     }) },
     h('div', { class: 'row' }, field('Nominee', 'nominee', { value: p.nominee }), field('Address', 'address', { value: p.address }), field('Sum insured (₹)', 'sumInsured', { type: 'number', placeholder: String(p.sumInsured) })),
     h('button', { type: 'submit' }, 'Submit endorsement'));
+    const reinstate = h('div', { class: 'actions' }, h('button', { class: 'ghost', onclick: act(async () => {
+      if (!confirm('Reinstate this policy? Admin fee INR 500 applies, and you confirm no claims occurred during lapse.')) return;
+      await api('POST', `/policies/${id}/reinstate`, { paymentToken: 'tok_success', healthDeclaration: true });
+      toast('Policy reinstated successfully'); policiesView(id);
+    }) }, 'Reinstate policy'));
     const renew = h('div', { class: 'actions' }, h('button', { class: 'ghost', onclick: act(async () => {
       const rq = await api('GET', `/policies/${id}/renewal-quote`);
       if (!confirm(`Renew until ${rq.newEndDate} for ${inr(rq.premium)}? (sandbox card)`)) return;
@@ -377,6 +382,7 @@
       h('h3', {}, 'Endorsement history'),
       table([['When', (e) => date(e.created_at)], ['Changes', (e) => JSON.stringify(e.changes)], ['Previous', (e) => JSON.stringify(e.previous)], ['Premium adj.', (e) => inr(e.premium_adjustment)]], p.endorsements, 'No endorsements.'),
       canChange && p.status === 'ACTIVE' ? [h('h3', {}, 'Change policy details'), endorse] : null,
+      ['CUSTOMER', 'AGENT'].includes(state.me.role) && p.status === 'EXPIRED' ? [h('h3', {}, 'Reinstatement'), h('p', { class: 'muted' }, 'Policy is expired. Reinstatement is available within the 30-day grace period with health declaration.'), reinstate] : null,
       ['CUSTOMER', 'AGENT'].includes(state.me.role) && ['ACTIVE', 'EXPIRED'].includes(p.status) ? [h('h3', {}, 'Renewal'), h('p', { class: 'muted' }, 'Renewal opens 60 days before expiry.'), renew] : null,
       canChange && p.status === 'ACTIVE' ? [h('h3', {}, 'Cancel policy'), cancelForm] : null));
     target.scrollIntoView({ behavior: 'smooth' });
