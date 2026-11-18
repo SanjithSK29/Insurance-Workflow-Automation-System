@@ -2,7 +2,7 @@
 // checks, BPMN approval routing, settlement and claimant notifications.
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
-const { ah, today, isIsoDate, round2, parseJson, parseNumber } = require('../core/util');
+const { ah, today, isIsoDate, round2, parseJson, parseNumber, sanitizeText } = require('../core/util');
 const { requireRole } = require('../security/middleware');
 const { detectFraud } = require('./fraud');
 const { computeSettlement } = require('./settlement');
@@ -91,7 +91,7 @@ module.exports = function claimsModule(ctx) {
     if (!isIsoDate(body.incidentDate)) throw unprocessable('INVALID_CLAIM', 'incidentDate must be YYYY-MM-DD');
     if (body.incidentDate > today()) throw unprocessable('INVALID_CLAIM', 'incidentDate cannot be in the future');
     if (body.incidentDate < policy.start_date || body.incidentDate > policy.end_date) throw unprocessable('INVALID_CLAIM', 'Incident date is outside the policy period');
-    const description = body.description ? String(body.description).slice(0, 2000) : null;
+    const description = body.description ? sanitizeText(body.description, 2000) : null;
     const decoded = decodeDocuments(body.documents);
 
     const priorClaims = db.all('SELECT * FROM claims WHERE policy_id = ?', policy.id);

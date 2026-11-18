@@ -52,4 +52,14 @@ const parseJson = (s, fallback = null) => {
   }
 };
 
-module.exports = { DAY_MS, round2, addDays, addYears, daysBetween, today, ageOn, isIsoDate, parseNumber, ah, parseJson, isoDate, toDate };
+// Strips HTML tags and stray angle brackets to prevent stored XSS attacks
+const sanitizeText = (s, maxLen = 2000) => {
+  if (typeof s !== 'string') return '';
+  return s
+    .replace(/<[^>]*>/g, '')
+    .replace(/[<>]/g, '')
+    .slice(0, maxLen)
+    .trim();
+};
+
+module.exports = { DAY_MS, round2, addDays, addYears, daysBetween, today, ageOn, isIsoDate, parseNumber, ah, parseJson, isoDate, toDate, sanitizeText };
