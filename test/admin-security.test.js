@@ -300,3 +300,37 @@ describe('Authentication hardening', () => {
     assert.match(res.headers.get('permissions-policy'), /camera=\(\)/);
   });
 });
+
+describe('Login hardening follow-ups', () => {
+  let t;
+  before(async () => { t = await startApp(); });
+  after(() => t.close());
+
+  const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+  async function loginMs(email, password) {
+    const start = process.hrtime.bigint();
+    await t.call('POST', '/auth/login', { body: { email, password } });
+    return Number(process.hrtime.bigint() - start) / 1e6;
+  }
+
+  test('TC-Sec-Enum-01: unknown and disabled accounts take as long to refuse as a wrong password', async () => {
+    const email = 'timing@test.local';
+    const disabledEmail = 'timing-disabled@test.local';
+    await t.call('POST', '/auth/register', { body: { email, name: 'Timing User', password: PASSWORD } });
+    const reg = await t.call('POST', '/auth/register', { body: { email: disabledEmail, name: 'Disabled User', password: PASSWORD } });
+    await t.call('PATCH', `/admin/users/${reg.body.id}`, { token: t.tokens.ADMIN, body: { active: false } });
+
+    // 4 attempts per account stays under the lockout threshold (5).
+    const wrong = [], unknown = [], disabled = [];
+    for (let i = 0; i < 4; i++) {
+      wrong.push(await loginMs(email, 'wrong-password'));
+      unknown.push(await loginMs(`nobody${i}@test.local`, 'wrong-password'));
+      disabled.push(await loginMs(disabledEmail, PASSWORD));
+    }
+    // The password hash (scrypt) dominates a wrong-password check; skipping it
+    // makes unknown or disabled accounts answer many times faster.
+    const ms = (xs) => median(xs).toFixed(1);
+    assert.ok(median(unknown) > median(wrong) * 0.5, `unknown email ${ms(unknown)}ms vs wrong password ${ms(wrong)}ms`);
+    assert.ok(median(disabled) > median(wrong) * 0.5, `disabled account ${ms(disabled)}ms vs wrong password ${ms(wrong)}ms`);
+  });
+});
