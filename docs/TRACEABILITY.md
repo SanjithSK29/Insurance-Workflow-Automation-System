@@ -17,6 +17,8 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **96.44 % statements, 85.56
 | IWA-F-012 | Endorsement with audit trail | `policies.js` (`endorse`: premium difference charged or refunded, DEF-09; text fields, DEF-11) | TC-Endorse-01..06 | policy, numeric-input, endorsement-cancellation, policies-payments-edge-cases | P |
 | IWA-F-013 | Invoice PDF with tax breakup | `payments.js` (`generateInvoice`, also for paid endorsements) | TC-Invoice-01, TC-Endorse-03 | policy, endorsement-cancellation | P |
 | IWA-F-014 | Policy cancellation with pro-rata refund | `policies.js` (`cancel`, `unusedPremium` per paid period, DEF-10), `payments.js` (`refund`), `documents.js` (cancellation letter), web UI cancel form | TC-Cancel-01..05 | policy-cancellation, endorsement-cancellation | P |
+| IWA-F-015 | Policy reinstatement within 30-day grace period | `policies.js` (`reinstate`, payment lock, 500 fee, health attestation), `reinstatements` table | TC-Reinstate-03..06 | policy-reinstatement | P |
+| IWA-F-016 | Policy cancellation preview quote | `policies.js` (`cancellationQuote`, breakdown of gross refund, charge, net refund) | TC-Reinstate-01..02 | policy-reinstatement | P |
 | IWA-F-020 | Claim registration with document upload (10 MB) | `src/modules/claims.js` | TC-Claim-01 – TC-Claim-11, TC-Contract-01 – 05, TC-Date-01 – 03, TC-Sec-Claim-04 – 06 | claims-workflow, claims-edge-cases, claims-contract, date-validation, claims-security | P |
 | IWA-F-021 | Configurable multi-level BPMN approval | `src/workflow/*`, `claim-approval.bpmn` | TC-WF-01 – TC-WF-03, TC-Sec-Claim-07 | claims-workflow, claims-edge-cases, claims-security | P |
 | IWA-F-022 | Automated fraud detection | `src/modules/fraud.js` | TC-Fraud-01 – TC-Fraud-11 | claims-workflow.test.js, fraud-settlement.test.js | P |
@@ -42,6 +44,8 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **96.44 % statements, 85.56
 | IWA-SR-003 | PII masked in logs and UI | `security/pii.js`, `core/logger.js`, audit redaction | TC-Sec-PII-01, TC-Sec-Claim-03 | P |
 | IWA-SR-004 | Rate limiting and throttling | `rateLimit` middleware (stricter on public routes) | TC-Sec-RL-01 | P |
 | IWA-SR-005 | Digitally signed policy and settlement documents | Ed25519 in `documents.js` | TC-Sec-Sign-01, TC-Policy-01, TC-Settle-01, TC-Settle-10 – 12 | P |
+| IWA-SR-006 | Stored XSS sanitization and escaping on user-submitted texts | `core/util.js` (`sanitizeText`), `claims.js` | TC-Sec-XSS-01 | sprint4-security-fraud | P |
+| IWA-F-025 | Adjuster claims register export with status and coverage filtering | `admin.js` (`report`), RBAC extension for adjuster | TC-Report-02 | sprint4-security-fraud | P |
 
 ## Additional automated checks
 

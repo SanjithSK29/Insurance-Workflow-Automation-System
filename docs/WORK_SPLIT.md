@@ -8,6 +8,7 @@ How the IWAS implementation is divided among the four team members. Ownership fo
 | Samarth A | Developer Lead | Policies, payments, invoices, documents/PDF, web UI | F-010, F-011, F-012, F-013, UX (3.1) |
 | Sakaray Vishal | QA Lead | Claims, fraud detection, settlement, notifications, test suite and RTM | F-020, F-022, F-023, F-024, STP execution |
 | Sampreeth Jaladi | DevOps / Security Engineer | Auth/MFA, RBAC, audit, encryption, PII masking, dashboards/reports, CI/CD, Docker | F-031 – F-034, NF-003/004, SR-001 – SR-005 |
+| Surya A Bhat | Systems & Hardening Engineer | Policy reinstatement, cancellation quote preview, emergency contacts, fraud early velocity rules, XSS sanitization, claims register export | IWA-F-015, IWA-F-016, IWA-F-025, SR-006 |
 
 ---
 
@@ -75,6 +76,22 @@ How the IWAS implementation is divided among the four team members. Ownership fo
 
 ---
 
+## 5. Surya A Bhat: Systems & Hardening Engineer
+
+**Modules**
+- `src/modules/policies.js`: policy reinstatement for lapsed policies within the 30-day grace period, cancellation quote preview API
+- `src/modules/customers.js`: customer emergency contact and nominee management with audit logging
+- `src/modules/fraud.js`: `RAPID_INCEPTION_HIGH_VALUE` rule detecting high-value claims occurring shortly after policy inception
+- `src/modules/admin.js`: adjuster-accessible claims register export with status and coverage type filtering
+- `src/core/util.js` & `src/modules/claims.js`: stored XSS sanitization for claim incident notes and descriptions
+- `public/app.js`: web UI controls for policy reinstatement and claims export in adjuster portal
+
+**Tests:** `test/policy-reinstatement.test.js` (TC-Reinstate-01..06), `test/sprint4-security-fraud.test.js` (TC-Cust-03, TC-Fraud-12, TC-Report-02, TC-Sec-XSS-01)
+
+**Docs:** Sprint 4 planning and delivery record in `docs/SPRINTS.md`, traceability matrix update in `docs/TRACEABILITY.md`, and [Sprint 4 Systems & Hardening Report](reports/SURYA_ENHANCEMENT_REPORT.md)
+
+---
+
 ## Shared responsibilities
 
 | Activity | Lead | Support |
@@ -91,3 +108,4 @@ How the IWAS implementation is divided among the four team members. Ownership fo
 2. **Samarth:** pay with a sandbox token, the policy PDF is issued, verify its signature, show the invoice, endorse the nominee, show renewal.
 3. **Vishal:** file a claim with a document, show the progress tracker, file a duplicate (fraud flag), the adjuster approves, senior approval for a high-value claim, settle, show notifications. Run `npm test`.
 4. **Sampreeth:** admin login with MFA, RBAC denial, audit chain verification, dashboard, CSV/PDF export, CI pipeline on GitHub.
+5. **Surya:** policy reinstatement after expiry within grace period, emergency contact update, rapid-inception fraud detection, claims CSV export for adjusters, and XSS sanitization.

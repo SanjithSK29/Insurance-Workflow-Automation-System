@@ -28,6 +28,7 @@
 | Samarth A | `samarth2006-28` | Developer Lead | Policies, payments, documents/PDF, web UI; code review |
 | Sakaray Vishal | `vxs01` | QA Lead | Claims, fraud, settlement, notifications; test plan, RTM, test reports |
 | Sampreeth Jaladi | `minkysponge-wq` | DevOps / Security | Auth, MFA, RBAC, audit, encryption, dashboards/reports, CI/CD, Docker |
+| Surya A Bhat | `Suryabhat48` | Systems & Hardening | Policy reinstatement, cancellation preview, emergency contacts, fraud rules, XSS sanitization, claims export |
 
 The GitHub account column maps commit and PR authors to people (e.g. PR #6 and its 7 commits are Sampreeth's, under `minkysponge-wq`).
 
@@ -92,15 +93,30 @@ Story points use the Fibonacci scale (1, 2, 3, 5, 8). They estimate relative eff
 | Code review of PRs #6–#13 | STP §9 | Samarth | 1 | `samarth-dev-hardening` | 17-11-2026 |
 | **Total** | | | **39** | | |
 
+### Sprint 4: 18 Nov 2026 (goal: policy reinstatement, emergency contacts, fraud velocity, XSS sanitization, claims export)
+
+| Item | Requirement | Owner | SP | Delivered in | Date |
+| --- | --- | --- | --- | --- | --- |
+| Policy reinstatement for lapsed policies within 30-day grace period | IWA-F-015 | Surya | 5 | `feature/sprint4-enhancements` | 18-11-2026 |
+| Customer policy cancellation quote preview API | IWA-F-016 | Surya | 2 | `feature/sprint4-enhancements` | 18-11-2026 |
+| Customer emergency contact management with audit trail | IWA-F-003, SR-003 | Surya | 3 | `feature/sprint4-enhancements` | 18-11-2026 |
+| Fraud detection rule for rapid inception high-value claims | IWA-F-022 | Surya | 3 | `feature/sprint4-enhancements` | 18-11-2026 |
+| Claims register export with filters for adjusters and ops | IWA-F-025, F-033 | Surya | 3 | `feature/sprint4-enhancements` | 18-11-2026 |
+| Input sanitization & XSS protection in incident notes | IWA-SR-006 | Surya | 3 | `feature/sprint4-enhancements` | 18-11-2026 |
+| Web UI actions for reinstatement and claims export | SRS 3.1 | Surya | 2 | `feature/sprint4-enhancements` | 18-11-2026 |
+| Automated test suite for reinstatement, cancellation quote and security | STP | Surya | 5 | `feature/sprint4-enhancements` | 18-11-2026 |
+| **Total** | | | **26** | | |
+
 ## 4. Velocity and load
 
-| Member | Sprint 1 SP | Sprint 2 SP | Sprint 3 SP | Total |
-| --- | --- | --- | --- | --- |
-| Sanjith | 13 | 11 | 5 | 29 |
-| Samarth | 7 | 14 | 14 | 35 |
-| Vishal | 5 | 13 | 13 | 31 |
-| Sampreeth | 10 | 12 | 7 | 29 |
-| **Team** | **35** | **50** | **39** | **124** |
+| Member | Sprint 1 SP | Sprint 2 SP | Sprint 3 SP | Sprint 4 SP | Total |
+| --- | --- | --- | --- | --- | --- |
+| Sanjith | 13 | 11 | 5 | – | 29 |
+| Samarth | 7 | 14 | 14 | – | 35 |
+| Vishal | 5 | 13 | 13 | – | 31 |
+| Sampreeth | 10 | 12 | 7 | – | 29 |
+| Surya | – | – | – | 26 | 26 |
+| **Team** | **35** | **50** | **39** | **26** | **150** |
 
 Estimated scope was 35 SP for Sprint 1 and 50 SP for Sprint 2. **Actual velocity committed to the repository inside the sprint windows was 0**, apart from the CI pipeline (2 SP, done early on 10 Oct): the Sprint 1 and Sprint 2 items were not committed during the sprints and were integrated together on 01-11-2026 in PR #5.
 
