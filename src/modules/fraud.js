@@ -19,6 +19,10 @@ function detectFraud({ claim, policy, priorClaims = [], documentsCount = 0, repo
 
   if (daysBetween(policy.start_date, claim.incidentDate) <= 30) add('EARLY_CLAIM', 25, 'Incident within 30 days of policy start');
 
+  if (daysBetween(policy.start_date, claim.incidentDate) <= 14 && claim.amount > policy.sum_insured * 0.5) {
+    add('RAPID_INCEPTION_HIGH_VALUE', 35, 'High-value claim (>50% sum insured) occurred within 14 days of policy inception');
+  }
+
   const recent = active.filter((c) => daysBetween(c.created_at.slice(0, 10), reportedOn) <= 90);
   if (recent.length >= 2) add('FREQUENT_CLAIMS', 25, `${recent.length} other claims on this policy in the last 90 days`);
 
