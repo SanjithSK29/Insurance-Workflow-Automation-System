@@ -49,6 +49,11 @@ module.exports = function usersModule(ctx) {
 
   const lockout = config.lockout || { maxAttempts: 5, minutes: 15 };
 
+  // Checked when the email is unknown or the account is disabled, so those
+  // logins cost the same scrypt work as a wrong password and response time
+  // does not reveal which emails are registered.
+  const DUMMY_PASSWORD_HASH = hashPassword('timing-equaliser-never-matches');
+
   // Count a failed password or MFA attempt; lock the account once the
   // threshold is reached so the password and the 6-digit OTP cannot be
   // brute-forced from many IPs (the rate limiter is per IP only).
@@ -76,7 +81,8 @@ module.exports = function usersModule(ctx) {
       throw new ApiError(429, 'ACCOUNT_LOCKED', 'Too many failed attempts. Try again later or contact an administrator');
     }
 
-    if (!user || !user.active || !verifyPassword(String(password || ''), user.password_hash)) {
+    const passwordOk = verifyPassword(String(password || ''), user?.password_hash ?? DUMMY_PASSWORD_HASH);
+    if (!user || !user.active || !passwordOk) {
       audit.record(email ? String(email).toLowerCase() : 'unknown', 'LOGIN_FAILED', 'user', user?.id ?? null, {});
       if (user) registerFailure(user);
       throw unauthorized('Invalid email or password');
