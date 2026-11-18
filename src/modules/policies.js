@@ -111,6 +111,74 @@ module.exports = function policiesModule(ctx) {
     });
   }
 
+  // Policy reinstatement for lapsed policies within the 30-day grace period.
+  async function reinstate(policyId, body, user) {
+    const { paymentToken, healthDeclaration } = body || {};
+    if (!paymentToken) throw badRequest('paymentToken is required');
+    if (healthDeclaration !== true) {
+      throw unprocessable('HEALTH_DECLARATION_REQUIRED', 'Customer must declare no claims or medical conditions occurred during lapse');
+    }
+    const p = getAccessible(user, policyId);
+    if (p.status !== 'EXPIRED') throw conflict('NOT_EXPIRED', `Only expired policies can be reinstated; current status is ${p.status}`);
+    const daysLeft = daysBetween(today(), p.end_date);
+    if (daysLeft < -30) throw conflict('GRACE_PERIOD_EXCEEDED', 'Grace period of 30 days has expired; cannot reinstate');
+    const rq = renewalQuote(p);
+    const reinstatementFee = 500;
+    const totalPayable = round2(rq.premium + reinstatementFee);
+
+    return ctx.services.payments.withPaymentLock(`policy:${p.id}`, async () => {
+      const payment = await ctx.services.payments.charge({
+        purpose: 'REINSTATEMENT',
+        referenceId: p.id,
+        policyId: p.id,
+        total: totalPayable,
+        token: paymentToken,
+        actorId: user.id,
+      });
+
+      const reinstatementId = newId('RIN');
+      const daysLapsed = Math.abs(daysLeft);
+      db.transaction(() => {
+        db.run(
+          "UPDATE policies SET end_date = ?, premium = ?, status = 'ACTIVE', version = version + 1 WHERE id = ?",
+          rq.newEndDate, rq.premium, p.id,
+        );
+        db.run(
+          'INSERT INTO reinstatements (id, policy_id, reinstatement_fee, premium_paid, days_lapsed, payment_id, reinstated_by, created_at) VALUES (?,?,?,?,?,?,?,?)',
+          reinstatementId, p.id, reinstatementFee, rq.premium, daysLapsed, payment.paymentId, user.id, nowIso(),
+        );
+      });
+
+      const doc = renderPolicyPdf(p.id);
+      const invoice = ctx.services.payments.generateInvoice(payment.paymentId, {
+        customerId: p.customer_id,
+        policyNumber: p.policy_number,
+        description: `Policy reinstatement fee (INR ${reinstatementFee}) and premium until ${rq.newEndDate}`,
+      });
+      audit.record(user.id, 'POLICY_REINSTATED', 'policy', p.id, {
+        reinstatementId,
+        daysLapsed,
+        reinstatementFee,
+        newEndDate: rq.newEndDate,
+        paymentId: payment.paymentId,
+      });
+      ctx.services.notifications.notifyCustomer(
+        p.customer_id,
+        'POLICY_REINSTATED',
+        `Policy ${p.policy_number} has been reinstated successfully until ${rq.newEndDate}.`,
+      );
+      bus.publish('policy.reinstated', { policyId: p.id, customerId: p.customer_id });
+      return {
+        policy: present(db.get('SELECT * FROM policies WHERE id = ?', p.id)),
+        payment,
+        reinstatementId,
+        reinstatementFee,
+        documentId: doc.id,
+        invoiceDocumentId: invoice.id,
+      };
+    });
+  }
+
   // A higher sum insured is charged before the change applies; a lower one is
   // refunded after it (DEF-09). Runs under the policy's payment lock so it
   // cannot interleave with a renewal or another endorsement.
@@ -344,6 +412,10 @@ module.exports = function policiesModule(ctx) {
 
   router.get('/:id/renewal-quote', (req, res) => res.json(renewalQuote(getAccessible(req.user, req.params.id))));
 
+    router.post('/:id/reinstate', requireRole('CUSTOMER', 'AGENT'), ah(async (req, res) => {
+    res.json(await reinstate(req.params.id, req.body || {}, req.user));
+  }));
+
   router.post('/:id/renew', requireRole('CUSTOMER', 'AGENT'), ah(async (req, res) => {
     if (!req.body?.paymentToken) throw badRequest('paymentToken is required');
     res.json(await renew(req.params.id, req.body.paymentToken, req.user));
@@ -357,5 +429,5 @@ module.exports = function policiesModule(ctx) {
     res.json(await cancel(req.params.id, req.body || {}, req.user));
   }));
 
-  return { issue, renew, endorse, cancel, runRenewalReminders, getAccessible, present, router };
+  return { issue, renew, reinstate, endorse, cancel, runRenewalReminders, getAccessible, present, router };
 };

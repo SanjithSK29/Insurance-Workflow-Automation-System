@@ -228,6 +228,17 @@ CREATE TABLE IF NOT EXISTS cancellations (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS reinstatements (
+  id TEXT PRIMARY KEY,
+  policy_id TEXT NOT NULL REFERENCES policies(id),
+  reinstatement_fee REAL NOT NULL DEFAULT 0,
+  premium_paid REAL NOT NULL,
+  days_lapsed INTEGER NOT NULL,
+  payment_id TEXT,
+  reinstated_by TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS refunds (
   id TEXT PRIMARY KEY,
   policy_id TEXT NOT NULL REFERENCES policies(id),
