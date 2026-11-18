@@ -300,3 +300,101 @@ describe('Authentication hardening', () => {
     assert.match(res.headers.get('permissions-policy'), /camera=\(\)/);
   });
 });
+
+describe('Login hardening follow-ups', () => {
+  let t;
+  before(async () => { t = await startApp(); });
+  after(() => t.close());
+
+  const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+  async function loginMs(email, password) {
+    const start = process.hrtime.bigint();
+    await t.call('POST', '/auth/login', { body: { email, password } });
+    return Number(process.hrtime.bigint() - start) / 1e6;
+  }
+
+  test('TC-Sec-Enum-01: unknown and disabled accounts take as long to refuse as a wrong password', async () => {
+    const email = 'timing@test.local';
+    const disabledEmail = 'timing-disabled@test.local';
+    await t.call('POST', '/auth/register', { body: { email, name: 'Timing User', password: PASSWORD } });
+    const reg = await t.call('POST', '/auth/register', { body: { email: disabledEmail, name: 'Disabled User', password: PASSWORD } });
+    await t.call('PATCH', `/admin/users/${reg.body.id}`, { token: t.tokens.ADMIN, body: { active: false } });
+
+    // 4 attempts per account stays under the lockout threshold (5).
+    const wrong = [], unknown = [], disabled = [];
+    for (let i = 0; i < 4; i++) {
+      wrong.push(await loginMs(email, 'wrong-password'));
+      unknown.push(await loginMs(`nobody${i}@test.local`, 'wrong-password'));
+      disabled.push(await loginMs(disabledEmail, PASSWORD));
+    }
+    // The password hash (scrypt) dominates a wrong-password check; skipping it
+    // makes unknown or disabled accounts answer many times faster.
+    const ms = (xs) => median(xs).toFixed(1);
+    assert.ok(median(unknown) > median(wrong) * 0.5, `unknown email ${ms(unknown)}ms vs wrong password ${ms(wrong)}ms`);
+    assert.ok(median(disabled) > median(wrong) * 0.5, `disabled account ${ms(disabled)}ms vs wrong password ${ms(wrong)}ms`);
+  });
+
+  test('TC-Sec-Lock-03: invalid lockout settings fall back to the defaults instead of turning lockout off', async () => {
+    // e.g. LOCKOUT_MAX_ATTEMPTS=abc or LOCKOUT_MINUTES=-1 in the environment
+    for (const lockout of [{ maxAttempts: NaN, minutes: NaN }, { maxAttempts: -1, minutes: 0 }]) {
+      const bad = await startApp({ lockout });
+      try {
+        const email = 'badconfig@test.local';
+        await bad.call('POST', '/auth/register', { body: { email, name: 'Bad Config', password: PASSWORD } });
+        for (let i = 0; i < 5; i++) await bad.call('POST', '/auth/login', { body: { email, password: 'wrong-password' } });
+        const res = await bad.call('POST', '/auth/login', { body: { email, password: PASSWORD } });
+        assert.equal(res.status, 429, `locked after 5 failures with ${JSON.stringify(lockout)}`);
+        assert.ok(Number(res.headers.get('retry-after')) > 0);
+      } finally {
+        await bad.close();
+      }
+    }
+  });
+
+  test('TC-Sec-Lock-04: wrong one-time codes count towards the lockout', async () => {
+    const u = t.ctx.services.users.createUser({ email: 'mfa-lock@test.local', name: 'MFA Lock', role: 'UNDERWRITER', password: PASSWORD });
+    const good = totp(u.mfaSecret);
+    const wrongCode = good.slice(0, 5) + ((Number(good[5]) + 1) % 10);
+    for (let i = 0; i < 5; i++) {
+      const res = await t.call('POST', '/auth/login', { body: { email: u.email, password: PASSWORD, otp: wrongCode } });
+      assert.equal(res.body.code, 'MFA_INVALID');
+    }
+    const locked = await t.call('POST', '/auth/login', { body: { email: u.email, password: PASSWORD, otp: totp(u.mfaSecret) } });
+    assert.equal(locked.status, 429, 'right password and right code are refused while locked');
+    assert.equal(locked.body.code, 'ACCOUNT_LOCKED');
+    assert.ok(t.ctx.db.get("SELECT 1 FROM audit_log WHERE action = 'ACCOUNT_LOCKED' AND actor = ?", u.id));
+  });
+
+  test('TC-Sec-Lock-05: a lock expires on its own after LOCKOUT_MINUTES', async () => {
+    const email = 'expire@test.local';
+    await t.call('POST', '/auth/register', { body: { email, name: 'Expire Me', password: PASSWORD } });
+    for (let i = 0; i < 5; i++) await t.call('POST', '/auth/login', { body: { email, password: 'wrong-password' } });
+    assert.equal((await t.call('POST', '/auth/login', { body: { email, password: PASSWORD } })).status, 429);
+
+    // Move the lock into the past instead of waiting 15 minutes.
+    t.ctx.db.run('UPDATE users SET locked_until = ? WHERE email = ?', new Date(Date.now() - 1000).toISOString(), email);
+    const res = await t.call('POST', '/auth/login', { body: { email, password: PASSWORD } });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.user.locked, false);
+  });
+
+  test('TC-Sec-RL-02: logout has its own rate limit and answers 429 in the standard error format', async () => {
+    // startApp itself logs in one user per role, so leave room for those.
+    const small = await startApp({ rateLimit: { windowMs: 60_000, max: 300, publicMax: 10 } });
+    try {
+      const email = 'logout-rl@test.local';
+      await small.call('POST', '/auth/register', { body: { email, name: 'Logout RL', password: PASSWORD } });
+      const token = (await small.call('POST', '/auth/login', { body: { email, password: PASSWORD } })).body.token;
+      const first = await small.call('POST', '/auth/logout', { token });
+      assert.equal(first.status, 204);
+      assert.ok(first.headers.get('ratelimit-policy'), 'the logout route carries its own limiter');
+      let last;
+      for (let i = 0; i < 15 && last?.status !== 429; i++) last = await small.call('POST', '/auth/logout', { token });
+      assert.equal(last.status, 429, 'repeated logouts are eventually refused');
+      assert.equal(last.body.code, 'RATE_LIMITED');
+      assert.ok(last.body.traceId);
+    } finally {
+      await small.close();
+    }
+  });
+});

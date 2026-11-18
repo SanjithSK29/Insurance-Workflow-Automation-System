@@ -26,7 +26,7 @@ STP v1.0 (31-08-2025) listed 9 features to test and named 11 example test cases 
 | 8 | A review of the other modules found the DEF-03 coercion in quotes, customer income, endorsements and the admin risk threshold (DEF-04..07). | Section 3.15 (TC-Num, TC-Quote-06/07, TC-KYC-03/04, TC-Endorse-02, TC-Admin-02). |
 | 9 | The Developer Lead tested his own modules (policies, payments, documents, PDF, web UI), whose branch coverage was 76–82 %, and found DEF-08..14: double charges, unpaid endorsements, wrong refunds after renewal, loose endorsement text, accented names in PDFs, colour contrast and logout not revoking the token. The WCAG audit (TC-UX-01), planned for UAT, was automated with axe-core. | 32 test cases: section 3.2 (TC-Pay-03..08, TC-Endorse-03..06, TC-Cancel-03..05, TC-Renew-03/04, TC-Policy-03/04, TC-Doc-01/02, TC-PDF-03..05) and section 3.16 (TC-UX-01..05). |
 
-After all changes: **154 test cases in 22 files** (122 after the QA cycle, then 32 from the Developer Lead). Branch coverage of the QA Lead's modules: claims 96.55 %, fraud 100 %, settlement 100 %, notifications 100 %.
+After all changes: **159 test cases in 22 files** (122 after the QA cycle, then 32 from the Developer Lead, then 5 login-hardening follow-ups by Sampreeth Jaladi). Branch coverage of the QA Lead's modules: claims 96.55 %, fraud 100 %, settlement 100 %, notifications 100 %.
 
 ## 2. Conventions
 
@@ -111,6 +111,11 @@ After all changes: **154 test cases in 22 files** (122 after the QA cycle, then 
 | TC-Sec-Mig-01 | — | U | Open a database from before the hardening columns | Migrated on open | P |
 | TC-Sec-Revoke-01 | SR-002 | I | Logout | Token revoked immediately; other sessions keep working | P |
 | TC-Sec-Trace-01 | STP 5.1 (fuzzing) | I | Send malformed trace ids | Only well-formed ids echoed | P |
+| TC-Sec-Enum-01 | SR-002, STP 5.1 | I | Time logins for unknown, disabled and real accounts | Unknown and disabled accounts take as long as a wrong password | P |
+| TC-Sec-Lock-03 | SR-002/004 | I | Start with invalid lockout settings | Defaults used; lockout still works | P |
+| TC-Sec-Lock-04 | SR-002/004 | I | Repeated wrong one-time codes | Count towards the lockout | P |
+| TC-Sec-Lock-05 | SR-002/004 | I | Lock time has passed | Login works again without an admin | P |
+| TC-Sec-RL-02 | SR-004 | I | Flood the logout route | 429 in the standard error format | P |
 
 ### 3.4 Performance and shared units — `test/performance-unit.test.js`
 

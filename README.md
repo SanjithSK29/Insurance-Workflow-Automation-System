@@ -2,7 +2,7 @@
 
 A working implementation of the insurance platform specified in this repository's SRS, SAD and STP. It covers customer onboarding, quotes, underwriting, policies and claims settlement, with BPMN-driven approval workflows, role-based dashboards and an immutable audit trail.
 
-> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **154 tests, 154 passing** (`npm test`), 96.44 % statement and 85.56 % branch coverage, enforced in CI; every screen of the web UI passes automated WCAG 2.1 AA checks. Test reports (unit, system validation, code coverage, branch coverage, test summary, defect log, Developer Lead report, code review log) are in [docs/reports](docs/reports/). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
+> **Status:** All high-priority functional requirements in the SRS are implemented and covered by automated tests: **159 tests, 159 passing** (`npm test`), 96.45 % statement and 85.94 % branch coverage, enforced in CI; every screen of the web UI passes automated WCAG 2.1 AA checks. Test reports (unit, system validation, code coverage, branch coverage, test summary, defect log, Developer Lead report, code review log) are in [docs/reports](docs/reports/). See [docs/TRACEABILITY.md](docs/TRACEABILITY.md) for the requirement → code → test mapping and [docs/WORK_SPLIT.md](docs/WORK_SPLIT.md) for team responsibilities.
 
 ## Quick start
 
@@ -135,9 +135,10 @@ See [.env.example](.env.example). For any environment that keeps data, set `DATA
 
 ### Authentication and session security
 
-- **Account lockout:** after `LOCKOUT_MAX_ATTEMPTS` failed password or MFA attempts (default 5), the account is locked for `LOCKOUT_MINUTES` (default 15). Login returns `429 ACCOUNT_LOCKED` with `Retry-After`. An admin can unlock it early with `PATCH /api/v1/admin/users/:id` and `{ "unlock": true }`.
+- **Account lockout:** after `LOCKOUT_MAX_ATTEMPTS` failed password or MFA attempts (default 5), the account is locked for `LOCKOUT_MINUTES` (default 15). Login returns `429 ACCOUNT_LOCKED` with `Retry-After`. An admin can unlock it early with `PATCH /api/v1/admin/users/:id` and `{ "unlock": true }`. Missing or invalid lockout settings (not a positive number) fall back to these defaults rather than turning lockout off.
+- **No account enumeration by timing:** a login for an unknown email or a disabled account still checks the password against a dummy hash, so it takes as long as a wrong password and the response time does not reveal which emails are registered.
 - **MFA replay protection:** each TOTP code is accepted once. A code from an already used time step is refused, even within its 30 s window.
-- **Logout:** `POST /api/v1/auth/logout` (with the bearer token) revokes that token server-side. Other sessions stay valid.
+- **Logout:** `POST /api/v1/auth/logout` (with the bearer token) revokes that token server-side. Other sessions stay valid. The route has its own rate limit (`RATE_LIMIT_PUBLIC_MAX` per window).
 - **Trace ids:** a client `X-Trace-Id` is reused only if it is 8–64 characters of `A-Z a-z 0-9 . _ -`; otherwise a new UUID is issued.
 
 Existing databases (for example the Docker `/data` volume) get the new columns automatically on start.

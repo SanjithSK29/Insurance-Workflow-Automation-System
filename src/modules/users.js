@@ -47,7 +47,18 @@ module.exports = function usersModule(ctx) {
     res.status(201).json({ id: user.id, email: user.email, name: user.name, role: user.role });
   });
 
-  const lockout = config.lockout || { maxAttempts: 5, minutes: 15 };
+  // A bad value (LOCKOUT_MAX_ATTEMPTS=abc gives NaN, or 0/negative) would
+  // silently switch lockout off, so fall back to the defaults instead.
+  const positiveOr = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
+  const lockout = {
+    maxAttempts: positiveOr(config.lockout?.maxAttempts, 5),
+    minutes: positiveOr(config.lockout?.minutes, 15),
+  };
+
+  // Checked when the email is unknown or the account is disabled, so those
+  // logins cost the same scrypt work as a wrong password and response time
+  // does not reveal which emails are registered.
+  const DUMMY_PASSWORD_HASH = hashPassword('timing-equaliser-never-matches');
 
   // Count a failed password or MFA attempt; lock the account once the
   // threshold is reached so the password and the 6-digit OTP cannot be
@@ -63,7 +74,18 @@ module.exports = function usersModule(ctx) {
     }
   }
 
-  router.post('/login', (req, res) => {
+  // Login and logout each get their own per-IP limiter on the route itself
+  // (on top of the /auth mount limit): every login runs scrypt, and every
+  // logout does a token lookup and a DB write.
+  const authRouteLimit = () => rateLimit({
+    windowMs: config.rateLimit.windowMs,
+    limit: config.rateLimit.publicMax,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    handler: (req, res, next) => next(new ApiError(429, 'RATE_LIMITED', 'Too many requests, slow down')),
+  });
+
+  router.post('/login', authRouteLimit(), (req, res) => {
     const { email, password, otp } = req.body || {};
     const user = db.get('SELECT * FROM users WHERE email = ?', String(email || '').toLowerCase());
 
@@ -76,7 +98,8 @@ module.exports = function usersModule(ctx) {
       throw new ApiError(429, 'ACCOUNT_LOCKED', 'Too many failed attempts. Try again later or contact an administrator');
     }
 
-    if (!user || !user.active || !verifyPassword(String(password || ''), user.password_hash)) {
+    const passwordOk = verifyPassword(String(password || ''), user?.password_hash ?? DUMMY_PASSWORD_HASH);
+    if (!user || !user.active || !passwordOk) {
       audit.record(email ? String(email).toLowerCase() : 'unknown', 'LOGIN_FAILED', 'user', user?.id ?? null, {});
       if (user) registerFailure(user);
       throw unauthorized('Invalid email or password');
@@ -102,16 +125,8 @@ module.exports = function usersModule(ctx) {
   });
 
   // Logout revokes the presented token server-side, so a stolen or shared
-  // token stops working immediately instead of at expiry. It has its own
-  // limiter because every call does a token lookup and a DB write.
-  const logoutLimit = rateLimit({
-    windowMs: config.rateLimit.windowMs,
-    limit: config.rateLimit.publicMax,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    handler: (req, res, next) => next(new ApiError(429, 'RATE_LIMITED', 'Too many requests, slow down')),
-  });
-  router.post('/logout', logoutLimit, authenticate(ctx), (req, res) => {
+  // token stops working immediately instead of at expiry.
+  router.post('/logout', authRouteLimit(), authenticate(ctx), (req, res) => {
     const nowSec = Math.floor(Date.now() / 1000);
     if (req.auth.jti) {
       db.run('INSERT OR IGNORE INTO revoked_tokens (jti, user_id, expires_at, revoked_at) VALUES (?,?,?,?)',
