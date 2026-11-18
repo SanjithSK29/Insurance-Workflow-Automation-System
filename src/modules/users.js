@@ -47,7 +47,13 @@ module.exports = function usersModule(ctx) {
     res.status(201).json({ id: user.id, email: user.email, name: user.name, role: user.role });
   });
 
-  const lockout = config.lockout || { maxAttempts: 5, minutes: 15 };
+  // A bad value (LOCKOUT_MAX_ATTEMPTS=abc gives NaN, or 0/negative) would
+  // silently switch lockout off, so fall back to the defaults instead.
+  const positiveOr = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
+  const lockout = {
+    maxAttempts: positiveOr(config.lockout?.maxAttempts, 5),
+    minutes: positiveOr(config.lockout?.minutes, 15),
+  };
 
   // Checked when the email is unknown or the account is disabled, so those
   // logins cost the same scrypt work as a wrong password and response time
