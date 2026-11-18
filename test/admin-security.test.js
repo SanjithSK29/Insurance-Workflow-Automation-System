@@ -333,4 +333,21 @@ describe('Login hardening follow-ups', () => {
     assert.ok(median(unknown) > median(wrong) * 0.5, `unknown email ${ms(unknown)}ms vs wrong password ${ms(wrong)}ms`);
     assert.ok(median(disabled) > median(wrong) * 0.5, `disabled account ${ms(disabled)}ms vs wrong password ${ms(wrong)}ms`);
   });
+
+  test('TC-Sec-Lock-03: invalid lockout settings fall back to the defaults instead of turning lockout off', async () => {
+    // e.g. LOCKOUT_MAX_ATTEMPTS=abc or LOCKOUT_MINUTES=-1 in the environment
+    for (const lockout of [{ maxAttempts: NaN, minutes: NaN }, { maxAttempts: -1, minutes: 0 }]) {
+      const bad = await startApp({ lockout });
+      try {
+        const email = 'badconfig@test.local';
+        await bad.call('POST', '/auth/register', { body: { email, name: 'Bad Config', password: PASSWORD } });
+        for (let i = 0; i < 5; i++) await bad.call('POST', '/auth/login', { body: { email, password: 'wrong-password' } });
+        const res = await bad.call('POST', '/auth/login', { body: { email, password: PASSWORD } });
+        assert.equal(res.status, 429, `locked after 5 failures with ${JSON.stringify(lockout)}`);
+        assert.ok(Number(res.headers.get('retry-after')) > 0);
+      } finally {
+        await bad.close();
+      }
+    }
+  });
 });
