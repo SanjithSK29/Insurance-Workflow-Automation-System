@@ -74,7 +74,18 @@ module.exports = function usersModule(ctx) {
     }
   }
 
-  router.post('/login', (req, res) => {
+  // Login and logout each get their own per-IP limiter on the route itself
+  // (on top of the /auth mount limit): every login runs scrypt, and every
+  // logout does a token lookup and a DB write.
+  const authRouteLimit = () => rateLimit({
+    windowMs: config.rateLimit.windowMs,
+    limit: config.rateLimit.publicMax,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    handler: (req, res, next) => next(new ApiError(429, 'RATE_LIMITED', 'Too many requests, slow down')),
+  });
+
+  router.post('/login', authRouteLimit(), (req, res) => {
     const { email, password, otp } = req.body || {};
     const user = db.get('SELECT * FROM users WHERE email = ?', String(email || '').toLowerCase());
 
@@ -114,16 +125,8 @@ module.exports = function usersModule(ctx) {
   });
 
   // Logout revokes the presented token server-side, so a stolen or shared
-  // token stops working immediately instead of at expiry. It has its own
-  // limiter because every call does a token lookup and a DB write.
-  const logoutLimit = rateLimit({
-    windowMs: config.rateLimit.windowMs,
-    limit: config.rateLimit.publicMax,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    handler: (req, res, next) => next(new ApiError(429, 'RATE_LIMITED', 'Too many requests, slow down')),
-  });
-  router.post('/logout', logoutLimit, authenticate(ctx), (req, res) => {
+  // token stops working immediately instead of at expiry.
+  router.post('/logout', authRouteLimit(), authenticate(ctx), (req, res) => {
     const nowSec = Math.floor(Date.now() / 1000);
     if (req.auth.jti) {
       db.run('INSERT OR IGNORE INTO revoked_tokens (jti, user_id, expires_at, revoked_at) VALUES (?,?,?,?)',
