@@ -16,9 +16,23 @@ const REPORTS = {
   claims: {
     title: 'Claims Register',
     columns: ['claim_id', 'policy_number', 'claim_type', 'amount', 'approved_amount', 'payable', 'status', 'fraud_score', 'created_at'],
-    query: (db) => db.all(`SELECT cl.id AS claim_id, p.policy_number, cl.claim_type, cl.amount, cl.approved_amount, cl.settlement, cl.status, cl.fraud_score, cl.created_at
-                           FROM claims cl JOIN policies p ON p.id = cl.policy_id ORDER BY cl.created_at`)
-      .map((r) => ({ ...r, payable: parseJson(r.settlement, {})?.payableAmount ?? '' })),
+    query: (db, filters = {}) => {
+      let sql = `SELECT cl.id AS claim_id, p.policy_number, cl.claim_type, cl.amount, cl.approved_amount, cl.settlement, cl.status, cl.fraud_score, cl.created_at
+                 FROM claims cl JOIN policies p ON p.id = cl.policy_id`;
+      const clauses = [];
+      const params = [];
+      if (filters.status) {
+        clauses.push('cl.status = ?');
+        params.push(String(filters.status).toUpperCase());
+      }
+      if (filters.coverageType) {
+        clauses.push('p.coverage_type = ?');
+        params.push(String(filters.coverageType).toLowerCase());
+      }
+      if (clauses.length) sql += ' WHERE ' + clauses.join(' AND ');
+      sql += ' ORDER BY cl.created_at DESC';
+      return db.all(sql, ...params).map((r) => ({ ...r, payable: parseJson(r.settlement, {})?.payableAmount ?? '' }));
+    },
   },
   payments: {
     title: 'Premium Collections',
@@ -94,10 +108,10 @@ module.exports = function adminModule(ctx) {
     };
   }
 
-  function report(type, format) {
+  function report(type, format, filters = {}) {
     const def = REPORTS[type];
     if (!def) throw notFound(`Report '${type}'`);
-    const rows = def.query(db);
+    const rows = def.query(db, filters);
     if (format === 'csv') {
       const lines = [def.columns.join(','), ...rows.map((r) => def.columns.map((c) => csvCell(r[c])).join(','))];
       return { mime: 'text/csv; charset=utf-8', filename: `${type}-${today()}.csv`, body: Buffer.from(lines.join('\r\n') + '\r\n', 'utf8') };
@@ -122,11 +136,15 @@ module.exports = function adminModule(ctx) {
 
   router.get('/dashboard', requireRole('ADMIN', 'UNDERWRITER', 'ADJUSTER'), (req, res) => res.json(dashboard()));
 
-  router.get('/reports/:type', requireRole('ADMIN'), (req, res) => {
-    const out = report(req.params.type, String(req.query.format || 'csv').toLowerCase());
-    audit.record(req.user.id, 'REPORT_EXPORTED', 'report', req.params.type, { format: req.query.format || 'csv' });
+  router.get('/reports/:type', (req, res, next) => {
+    if (req.params.type === 'claims') return requireRole('ADMIN', 'ADJUSTER')(req, res, next);
+    return requireRole('ADMIN')(req, res, next);
+  }, ah(async (req, res) => {
+    const filters = { status: req.query.status, coverageType: req.query.coverageType };
+    const out = report(req.params.type, String(req.query.format || 'csv').toLowerCase(), filters);
+    audit.record(req.user.id, 'REPORT_EXPORTED', 'report', req.params.type, { format: req.query.format || 'csv', filters });
     res.set({ 'Content-Type': out.mime, 'Content-Disposition': `attachment; filename="${out.filename}"` }).send(out.body);
-  });
+  }));
 
   router.get('/audit', requireRole('ADMIN'), (req, res) => res.json(audit.list(req.query)));
   router.get('/audit/verify', requireRole('ADMIN'), (req, res) => res.json(audit.verify()));
