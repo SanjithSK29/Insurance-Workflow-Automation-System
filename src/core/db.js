@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS customers (
   pan_enc TEXT,
   kyc_status TEXT NOT NULL DEFAULT 'NOT_STARTED',
   kyc_ref TEXT,
+  emergency_contact TEXT,
   created_at TEXT NOT NULL
 );
 

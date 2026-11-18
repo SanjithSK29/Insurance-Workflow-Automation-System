@@ -2,7 +2,7 @@
 // PII is encrypted at rest and masked in responses for non-authorized roles.
 const express = require('express');
 const { newId, nowIso } = require('../core/db');
-const { ah, ageOn, isIsoDate, parseNumber } = require('../core/util');
+const { ah, ageOn, isIsoDate, parseNumber, parseJson } = require('../core/util');
 const { CircuitBreaker, retry } = require('../core/resilience');
 const { requireRole } = require('../security/middleware');
 const { maskAadhaar, maskPan, maskPhone, maskEmail, canSeePii } = require('../security/pii');
@@ -94,6 +94,7 @@ module.exports = function customersModule(ctx) {
       kycStatus: row.kyc_status,
       kycRef: row.kyc_ref,
       agentId: row.agent_id,
+      emergencyContact: parseJson(row.emergency_contact, null),
       createdAt: row.created_at,
       piiMasked: !full,
     };
@@ -182,7 +183,24 @@ module.exports = function customersModule(ctx) {
     res.json(present(db.get('SELECT * FROM customers WHERE id = ?', row.id), req.user));
   });
 
-  router.post('/:id/kyc', requireRole('CUSTOMER', 'AGENT', 'UNDERWRITER'), ah(async (req, res) => {
+  router.patch('/:id/emergency-contact', requireRole('CUSTOMER', 'AGENT'), (req, res) => {
+    const row = getAccessible(req.user, req.params.id);
+    const { name, phone, relation } = req.body || {};
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      throw badRequest('emergency contact name must be at least 2 characters');
+    }
+    const cleanPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
+    if (!PHONE_RE.test(cleanPhone)) {
+      throw badRequest('emergency contact phone must be a 10-digit Indian mobile number');
+    }
+    const cleanRelation = String(relation || 'other').trim().toLowerCase();
+    const contact = { name: name.trim(), phone: cleanPhone, relation: cleanRelation, updatedAt: nowIso() };
+    db.run('UPDATE customers SET emergency_contact = ? WHERE id = ?', JSON.stringify(contact), row.id);
+    audit.record(req.user.id, 'CUSTOMER_EMERGENCY_CONTACT_UPDATED', 'customer', row.id, { contact });
+    res.json(present(db.get('SELECT * FROM customers WHERE id = ?', row.id), req.user));
+  });
+
+    router.post('/:id/kyc', requireRole('CUSTOMER', 'AGENT', 'UNDERWRITER'), ah(async (req, res) => {
     getAccessible(req.user, req.params.id);
     res.json(await runKyc(req.params.id, req.user.id));
   }));
