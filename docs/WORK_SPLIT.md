@@ -31,7 +31,7 @@ How the IWAS implementation is divided among the four team members. Ownership fo
 - `src/modules/policies.js`: issuance, policy numbering, renewal and renewal quote, 30/15/7-day reminder job, endorsements with pro-rata premium
 - `src/modules/payments.js`: payment gateway adapter (tokens, retry on transient failures), GST invoices with CGST/SGST, claim payouts
 - `src/modules/documents.js` and `src/modules/pdf.js`: document store, PDF writer, Ed25519 signing and verification
-- `public/` (`index.html`, `app.js`, `styles.css`): role-based web UI for customer, agent, underwriter, adjuster and admin, plus accessibility and English/Hindi labels
+- `public/` (`index.html`, `app.js`, `styles.css`): role-based web UI for customer, agent, underwriter, adjuster and admin, plus accessibility and English/Hindi labels; includes the design-system refresh, inline icon navigation and the light/dark theme toggle
 - `src/seed.js`: demo data
 
 **Tests:** `test/policy.test.js` (TC-Policy-01/02, TC-Renew-01, TC-Endorse-01, TC-Invoice-01), PDF unit test; Part-3: `test/payments-hardening.test.js`, `test/endorsement-cancellation.test.js`, `test/documents-pdf.test.js`, `test/policies-payments-edge-cases.test.js`, `test/ui-accessibility.test.js` (32 cases, DEF-08..14)
