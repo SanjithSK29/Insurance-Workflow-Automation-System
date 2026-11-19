@@ -69,7 +69,7 @@ describe('Sprint 4 Security, Fraud Detection & Claims Export', () => {
 
   it('TC-Report-02: Adjuster can export claims register CSV with filtering; Customer is forbidden', async () => {
     const cust = await env.newCustomer('report-01');
-    const pol = await env.buyPolicy(cust, { coverageType: 'health', sumInsured: 500_000, term: 1 });
+    const { policy: pol } = await env.buyPolicy(cust, { coverageType: 'health', sumInsured: 500_000, term: 1 });
 
     // File a claim
     await env.call('POST', '/claims', {
@@ -103,7 +103,7 @@ describe('Sprint 4 Security, Fraud Detection & Claims Export', () => {
     assert.equal(cleanText, 'alert("xss")Patient hospitalized at Apex Care');
 
     const cust = await env.newCustomer('xss-01');
-    const pol = await env.buyPolicy(cust, { coverageType: 'motor', sumInsured: 200_000, term: 1 });
+    const { policy: pol } = await env.buyPolicy(cust, { coverageType: 'motor', sumInsured: 200_000, term: 1 });
 
     const res = await env.call('POST', '/claims', {
       token: cust.token,
