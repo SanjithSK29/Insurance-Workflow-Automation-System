@@ -151,10 +151,7 @@ The `security` job in the CI pipeline runs `npm audit` (fails on high or critica
 
 ```text
 .
-├── .editorconfig
-├── .gitattributes
 ├── .github/workflows/ci-cd-pipeline.yaml   PDF checks + npm test + server smoke test + Docker build
-├── CHANGELOG.md
 ├── Dockerfile
 ├── docs/
 │   ├── TRACEABILITY.md                     RTM: requirement → module → test → status
@@ -162,8 +159,6 @@ The `security` job in the CI pipeline runs `npm audit` (fails on high or critica
 │   ├── TEST_CASES.md                       Test Case Document (updated after the sprints)
 │   ├── DEVIATIONS.md                       Claims and testing deviations from the SRS, SAD and STP
 │   ├── WORK_SPLIT.md                       Team responsibilities
-│   ├── CONTRIBUTING.md                     How to build, test and propose changes
-│   ├── DEMO.md                             Scripted end-to-end demo walkthrough
 │   └── reports/                            Part-3 test reports, test summary, defect log
 ├── perf/quote-load.js                      k6 load script (TC-Perf-01 against a deployed env)
 ├── public/                                 Web UI (index.html, app.js, styles.css)
@@ -179,23 +174,6 @@ The `security` job in the CI pipeline runs `npm audit` (fails on high or critica
 ├── SRS / SAD / STP PDFs
 └── README.md
 ```
-
-## FAQ
-
-**Do I need Java, Camunda or a database server to run this?**
-No. IWAS runs on Node.js 22.13+ with the built-in `node:sqlite`, an in-process event bus and a BPMN subset engine. See "Differences from the documented stack" for the upgrade path.
-
-**Where is the database stored?**
-In a local SQLite file (`IWAS_DB`, default `./iwas.db`). For any environment that keeps data, set `DATA_KEY`, `JWT_SECRET` and `SIGNING_KEY_PEM` so encrypted data stays readable across restarts.
-
-**How do I sign in as an admin or underwriter?**
-Those roles require a 6-digit TOTP code. Add the printed MFA secret to any authenticator app, or run `npm run otp -- <secret>`.
-
-**How do I test payments without a real card?**
-Use the sandbox tokens `tok_success`, `tok_decline` and `tok_flaky`. No card data is ever handled.
-
-**How do I switch themes?**
-Use the sun/moon toggle in the top bar. The choice is saved and defaults to your system preference.
 
 ## Project team
 
