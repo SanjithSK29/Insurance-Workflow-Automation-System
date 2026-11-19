@@ -180,6 +180,23 @@ The `security` job in the CI pipeline runs `npm audit` (fails on high or critica
 └── README.md
 ```
 
+## FAQ
+
+**Do I need Java, Camunda or a database server to run this?**
+No. IWAS runs on Node.js 22.13+ with the built-in `node:sqlite`, an in-process event bus and a BPMN subset engine. See "Differences from the documented stack" for the upgrade path.
+
+**Where is the database stored?**
+In a local SQLite file (`IWAS_DB`, default `./iwas.db`). For any environment that keeps data, set `DATA_KEY`, `JWT_SECRET` and `SIGNING_KEY_PEM` so encrypted data stays readable across restarts.
+
+**How do I sign in as an admin or underwriter?**
+Those roles require a 6-digit TOTP code. Add the printed MFA secret to any authenticator app, or run `npm run otp -- <secret>`.
+
+**How do I test payments without a real card?**
+Use the sandbox tokens `tok_success`, `tok_decline` and `tok_flaky`. No card data is ever handled.
+
+**How do I switch themes?**
+Use the sun/moon toggle in the top bar. The choice is saved and defaults to your system preference.
+
 ## Project team
 
 - **Sanjith Suresh Kumar**: Project Lead
