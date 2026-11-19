@@ -203,6 +203,11 @@ describe('Claims API edge cases', () => {
   test('TC-Settle-09: remaining cover drops by the amount paid, and the next claim is capped and flagged', async () => {
     const { c, policy } = await customerWithPolicy('ce9', { sumInsured: 100000 });
     const first = await fileClaim(c.token, policy.policyId, { amount: 90000 });
+    // 90 % of the cover a few days after purchase: the Sprint 4 RAPID_INCEPTION_HIGH_VALUE
+    // rule sends it to fraud investigation first, which the adjuster clears.
+    const firstStaff = await t.call('GET', `/claims/${first.body.claimId}`, { token: t.tokens.ADJUSTER });
+    assert.ok(firstStaff.body.fraudFlags.some((f) => f.code === 'RAPID_INCEPTION_HIGH_VALUE'));
+    await decide(first.body.claimId, 'ADJUSTER', { outcome: 'approve', comment: 'Cleared' });
     await decide(first.body.claimId, 'ADJUSTER', { outcome: 'approve' });
     const paid = await t.call('POST', `/claims/${first.body.claimId}/settle`, { token: t.tokens.ADJUSTER });
     assert.equal(paid.body.settlement.payableAmount, 76500);

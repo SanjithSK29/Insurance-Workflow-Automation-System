@@ -16,6 +16,9 @@ describe('Signed settlement letter (SR-005, F-023)', () => {
     t = await startApp({ rateLimit: { windowMs: 60_000, max: 10_000, publicMax: 10_000 } });
     c = await t.newCustomer('sl1');
     const { policy } = await t.buyPolicy(c, { sumInsured: 100000 });
+    // Start the cover 60 days ago so this test is about the letter, not about the
+    // early-claim fraud rules (EARLY_CLAIM, RAPID_INCEPTION_HIGH_VALUE).
+    t.ctx.db.run("UPDATE policies SET start_date = date('now', '-60 day') WHERE id = ?", policy.policyId);
     const filed = await t.call('POST', '/claims', {
       token: c.token,
       body: { policyId: policy.policyId, claimType: 'hospitalization', amount: 90000, incidentDate: today(), documents: [pdfDoc()] },
