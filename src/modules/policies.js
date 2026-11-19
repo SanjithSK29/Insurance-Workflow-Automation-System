@@ -293,8 +293,8 @@ module.exports = function policiesModule(ctx) {
     return Math.max(0, sum);
   }
 
-  // Policy cancellation (IWA-F-014): refunds the unexpired portion of the
-  // premium on a pro-rata basis, less a configurable short-rate retention.
+  // Refund preview (Sprint 4). cancel() uses the same figures, so the
+  // preview always matches what a cancellation actually refunds.
   function cancellationQuote(p) {
     if (p.status !== 'ACTIVE') throw conflict('NOT_ACTIVE', `Policy is ${p.status}; only active policies can be cancelled`);
     const remainingDays = daysBetween(today(), addDays(p.end_date, 1));
@@ -313,17 +313,13 @@ module.exports = function policiesModule(ctx) {
     };
   }
 
+  // Policy cancellation (IWA-F-014): refunds the unexpired portion of the
+  // premium on a pro-rata basis, less a configurable short-rate retention.
   async function cancel(policyId, { reason }, user) {
     const p = getAccessible(user, policyId);
-    if (p.status !== 'ACTIVE') throw conflict('NOT_ACTIVE', `Policy is ${p.status}; only active policies can be cancelled`);
-    const remainingDays = daysBetween(today(), addDays(p.end_date, 1)); // cover runs through end_date inclusive
-    if (remainingDays <= 0) throw conflict('ALREADY_EXPIRED', 'Policy has already expired');
+    const { remainingDays, grossRefund, fee, refundAmount } = cancellationQuote(p);
     const reasonText = String(reason || '').trim();
     if (reasonText && (reasonText.length < 3 || reasonText.length > 500)) throw badRequest('reason must be 3-500 characters');
-
-    const grossRefund = round2(unusedPremium(p, today()));
-    const fee = round2(grossRefund * (config.cancellationFeePercent / 100));
-    const refundAmount = round2(Math.max(0, grossRefund - fee));
 
     const cancellationId = newId('C');
     db.transaction(() => {
