@@ -99,6 +99,25 @@ describe('Web UI accessibility (IWA-NF-005)', () => {
     });
   }
 
+  test('TC-UX-06: no screen shows placeholder text such as "null" or "[object HTMLDivElement]" (DEF-17)', async () => {
+    const problems = [];
+    for (const role of ['CUSTOMER', 'AGENT', 'UNDERWRITER', 'ADJUSTER', 'ADMIN']) {
+      const { window, settle } = await openUi(role);
+      for (const button of [...window.document.querySelectorAll('#nav button')]) {
+        button.click();
+        await settle();
+        // Text nodes that are only "null"/"undefined" or a stringified DOM object.
+        const walker = window.document.createTreeWalker(window.document.querySelector('main'), window.NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          const text = n.nodeValue.trim();
+          if (text === 'null' || text === 'undefined' || text.includes('[object ')) problems.push(`${role}/${button.dataset.view}: "${text.slice(0, 40)}"`);
+        }
+      }
+      window.close();
+    }
+    assert.deepEqual(problems, []);
+  });
+
   test('TC-UX-03: keyboard users get a skip link, a labelled language switch and a polite live region', async () => {
     const { window } = await openUi('CUSTOMER');
     const doc = window.document;

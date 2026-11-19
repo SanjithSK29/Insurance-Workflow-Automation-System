@@ -8,7 +8,41 @@
 | Test plan | STP v1.0 §5 (unit level); test cases in [TEST_CASES.md](../TEST_CASES.md) v2.1 |
 | Build under test | Branch `vishal-input-validation` (= `main` at `b4c18dd` + PR #9 + PR #10 + PR #11) |
 | Executed on | 17-11-2026 (planned window 02-11 to 06-11-2026; see section 8) |
-| Result | **122 / 122 automated tests passed, 0 failed, 0 skipped.** 7 defects found and fixed during the cycle. |
+| Result | **Final run 19-11-2026: 171 / 171 automated tests passed, 0 failed, 0 skipped**, in 24 files; 17 defects found and fixed in all cycles. (QA cycle 17-11-2026: 122 / 122, 7 defects; sections 1–8 below.) |
+
+## 0. Final run (19-11-2026)
+
+Re-run of the whole suite on `main` at `aab6199` (PR #16) + branch `samarth-final-deliverables` (DEF-17 fix, TC-UX-06), after the Developer Lead cycle (PR #14), login hardening (PR #15), Sprint 4 and its fixes (PR #16). Command: `npm run test:coverage`; raw output in [evidence/final-test-run.txt](evidence/final-test-run.txt).
+
+| Test file | Owner | Tests | Passed | Failed |
+| --- | --- | --- | --- | --- |
+| admin-security.test.js | Sampreeth | 22 | 22 | 0 |
+| claim-tracking.test.js | Vishal | 5 | 5 | 0 |
+| claims-contract.test.js | Vishal | 5 | 5 | 0 |
+| claims-edge-cases.test.js | Vishal | 11 | 11 | 0 |
+| claims-security.test.js | Vishal | 7 | 7 | 0 |
+| claims-workflow.test.js | Vishal | 7 | 7 | 0 |
+| date-validation.test.js | Vishal | 4 | 4 | 0 |
+| documents-pdf.test.js | Samarth | 3 | 3 | 0 |
+| endorsement-cancellation.test.js | Samarth | 6 | 6 | 0 |
+| fraud-settlement.test.js | Vishal | 16 | 16 | 0 |
+| notifications-resilience.test.js | Vishal | 3 | 3 | 0 |
+| notifications.test.js | Vishal | 8 | 8 | 0 |
+| numeric-input.test.js | Vishal | 8 | 8 | 0 |
+| payments-hardening.test.js | Samarth | 3 | 3 | 0 |
+| performance-unit.test.js | shared | 6 | 6 | 0 |
+| policies-payments-edge-cases.test.js | Samarth | 10 | 10 | 0 |
+| policy-cancellation.test.js | Sanjith | 2 | 2 | 0 |
+| policy-reinstatement.test.js | Surya | 6 | 6 | 0 |
+| policy.test.js | Samarth | 6 | 6 | 0 |
+| quote-underwriting.test.js | Sanjith | 10 | 10 | 0 |
+| renewals-report.test.js | Sanjith | 3 | 3 | 0 |
+| settlement-letter.test.js | Vishal | 4 | 4 | 0 |
+| sprint4-security-fraud.test.js | Surya | 4 | 4 | 0 |
+| ui-accessibility.test.js | Samarth | 12 | 12 | 0 |
+| **Total** | | **171** | **171** | **0** |
+
+Defects across all cycles: 17 (DEF-01..07 QA cycle, DEF-08..14 Developer Lead cycle, DEF-15..16 Sprint 4, DEF-17 found while recording the Sprint 2 video), all fixed and covered by a regression test. See [DEFECT_LOG.md](DEFECT_LOG.md).
 
 ## 1. Scope
 

@@ -62,7 +62,8 @@
       else if (v === true) el.setAttribute(k, '');
       else el.setAttribute(k, v);
     }
-    for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+    // Flatten fully: optional sections are often [heading, list.map(...)] (DEF-17).
+    for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
     return el;
   }
   const $main = document.getElementById('main');
@@ -117,7 +118,8 @@
   };
 
   function page(title, ...content) {
-    $main.replaceChildren(h('h1', {}, t(title)), ...content);
+    // Skip empty optional sections; replaceChildren would print them as "null" (DEF-17).
+    $main.replaceChildren(h('h1', {}, t(title)), ...content.flat(Infinity).filter((c) => c != null && c !== false));
     $main.focus({ preventScroll: true });
   }
   const card = (title, ...content) => h('section', { class: 'card' }, title ? h('h2', {}, title) : null, ...content);

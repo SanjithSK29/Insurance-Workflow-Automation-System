@@ -1,0 +1,1319 @@
+
+> iwas@1.0.0 test
+> node --disable-warning=ExperimentalWarning --test --test-concurrency=1 "test/*.test.js"
+
+TAP version 13
+# Subtest: Admin, RBAC, dashboards, reports and audit
+    # Subtest: TC-Admin-01: admin validates and deploys a BPMN workflow; invalid BPMN is refused
+    ok 1 - TC-Admin-01: admin validates and deploys a BPMN workflow; invalid BPMN is refused
+      ---
+      duration_ms: 18.7076
+      type: 'test'
+      ...
+    # Subtest: TC-RBAC-01: unauthorized access is denied for every module
+    ok 2 - TC-RBAC-01: unauthorized access is denied for every module
+      ---
+      duration_ms: 284.8625
+      type: 'test'
+      ...
+    # Subtest: TC-Dash-01: dashboard with SLA metrics, claim backlog and policy counts loads in under 3s
+    ok 3 - TC-Dash-01: dashboard with SLA metrics, claim backlog and policy counts loads in under 3s
+      ---
+      duration_ms: 2.0518
+      type: 'test'
+      ...
+    # Subtest: TC-Report-01: reports export as valid CSV and PDF
+    ok 4 - TC-Report-01: reports export as valid CSV and PDF
+      ---
+      duration_ms: 7.7071
+      type: 'test'
+      ...
+    # Subtest: TC-Audit-01: audit log is append-only and tamper-evident
+    ok 5 - TC-Audit-01: audit log is append-only and tamper-evident
+      ---
+      duration_ms: 3.4666
+      type: 'test'
+      ...
+    1..5
+ok 1 - Admin, RBAC, dashboards, reports and audit
+  ---
+  duration_ms: 945.4628
+  type: 'suite'
+  ...
+# Subtest: Security requirements
+    # Subtest: TC-Sec-01: PII is encrypted at rest with AES-256-GCM
+    ok 1 - TC-Sec-01: PII is encrypted at rest with AES-256-GCM
+      ---
+      duration_ms: 93.9656
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-MFA-01: MFA is enforced for admin and underwriter roles
+    ok 2 - TC-Sec-MFA-01: MFA is enforced for admin and underwriter roles
+      ---
+      duration_ms: 344.5366
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-PII-01: PII is masked in the UI/API and logs except for authorized roles
+    ok 3 - TC-Sec-PII-01: PII is masked in the UI/API and logs except for authorized roles
+      ---
+      duration_ms: 103.2045
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-RL-01: rate limiting triggers on public APIs
+    ok 4 - TC-Sec-RL-01: rate limiting triggers on public APIs
+      ---
+      duration_ms: 530.1599
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Sign-01: issued documents carry a valid signature and tampering is detected
+    ok 5 - TC-Sec-Sign-01: issued documents carry a valid signature and tampering is detected
+      ---
+      duration_ms: 1.0942
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-TLS-01: HTTPS server enforces TLS 1.2 minimum and HSTS is sent
+    ok 6 - TC-Sec-TLS-01: HTTPS server enforces TLS 1.2 minimum and HSTS is sent
+      ---
+      duration_ms: 3.9955
+      type: 'test'
+      ...
+    1..6
+ok 2 - Security requirements
+  ---
+  duration_ms: 1598.1802
+  type: 'suite'
+  ...
+# Subtest: Authentication hardening
+    # Subtest: TC-Sec-MFA-02: a TOTP code cannot be replayed
+    ok 1 - TC-Sec-MFA-02: a TOTP code cannot be replayed
+      ---
+      duration_ms: 146.8243
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Lock-01: account locks after repeated failures and an admin can unlock it
+    ok 2 - TC-Sec-Lock-01: account locks after repeated failures and an admin can unlock it
+      ---
+      duration_ms: 347.5463
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Lock-02: a successful login resets the failure counter
+    ok 3 - TC-Sec-Lock-02: a successful login resets the failure counter
+      ---
+      duration_ms: 539.4609
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Mig-01: databases created before the hardening columns are migrated on open
+    ok 4 - TC-Sec-Mig-01: databases created before the hardening columns are migrated on open
+      ---
+      duration_ms: 71.8995
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Revoke-01: logout revokes the token immediately; other sessions keep working
+    ok 5 - TC-Sec-Revoke-01: logout revokes the token immediately; other sessions keep working
+      ---
+      duration_ms: 157.4013
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Trace-01: only well-formed client trace ids are echoed
+    ok 6 - TC-Sec-Trace-01: only well-formed client trace ids are echoed
+      ---
+      duration_ms: 9.1215
+      type: 'test'
+      ...
+    1..6
+ok 3 - Authentication hardening
+  ---
+  duration_ms: 1798.221
+  type: 'suite'
+  ...
+# Subtest: Login hardening follow-ups
+    # Subtest: TC-Sec-Enum-01: unknown and disabled accounts take as long to refuse as a wrong password
+    ok 1 - TC-Sec-Enum-01: unknown and disabled accounts take as long to refuse as a wrong password
+      ---
+      duration_ms: 678.9613
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Lock-03: invalid lockout settings fall back to the defaults instead of turning lockout off
+    ok 2 - TC-Sec-Lock-03: invalid lockout settings fall back to the defaults instead of turning lockout off
+      ---
+      duration_ms: 1689.5734
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Lock-04: wrong one-time codes count towards the lockout
+    ok 3 - TC-Sec-Lock-04: wrong one-time codes count towards the lockout
+      ---
+      duration_ms: 311.7666
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Lock-05: a lock expires on its own after LOCKOUT_MINUTES
+    ok 4 - TC-Sec-Lock-05: a lock expires on its own after LOCKOUT_MINUTES
+      ---
+      duration_ms: 343.7849
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-RL-02: logout has its own rate limit and answers 429 in the standard error format
+    ok 5 - TC-Sec-RL-02: logout has its own rate limit and answers 429 in the standard error format
+      ---
+      duration_ms: 641.8596
+      type: 'test'
+      ...
+    1..5
+ok 4 - Login hardening follow-ups
+  ---
+  duration_ms: 4189.4928
+  type: 'suite'
+  ...
+# Subtest: Claim status tracking (F-024)
+    # Subtest: TC-Track-01: the claim timeline lists every status change in order
+    ok 1 - TC-Track-01: the claim timeline lists every status change in order
+      ---
+      duration_ms: 143.5589
+      type: 'test'
+      ...
+    # Subtest: TC-Track-02: each status message names the claim, and approval and settlement state the amount
+    ok 2 - TC-Track-02: each status message names the claim, and approval and settlement state the amount
+      ---
+      duration_ms: 123.8478
+      type: 'test'
+      ...
+    # Subtest: TC-Track-03: a rejected claim tells the claimant and points them to support
+    ok 3 - TC-Track-03: a rejected claim tells the claimant and points them to support
+      ---
+      duration_ms: 115.9257
+      type: 'test'
+      ...
+    # Subtest: TC-Track-04: the adjuster team is told when a claim needs their review
+    ok 4 - TC-Track-04: the adjuster team is told when a claim needs their review
+      ---
+      duration_ms: 122.0924
+      type: 'test'
+      ...
+    # Subtest: TC-Track-05: email copies match the in-app messages one for one
+    ok 5 - TC-Track-05: email copies match the in-app messages one for one
+      ---
+      duration_ms: 165.6754
+      type: 'test'
+      ...
+    1..5
+ok 5 - Claim status tracking (F-024)
+  ---
+  duration_ms: 1292.8589
+  type: 'suite'
+  ...
+# Subtest: Claims API contract (SAD 4.3.2, 4.4)
+    # Subtest: TC-Contract-01: POST /api/v1/claim (singular, as in the SAD) registers a claim
+    ok 1 - TC-Contract-01: POST /api/v1/claim (singular, as in the SAD) registers a claim
+      ---
+      duration_ms: 11.2111
+      type: 'test'
+      ...
+    # Subtest: TC-Contract-02: SAD error codes: 401 Unauthorized, 404 Policy not found, 422 Invalid claim
+    ok 2 - TC-Contract-02: SAD error codes: 401 Unauthorized, 404 Policy not found, 422 Invalid claim
+      ---
+      duration_ms: 7.3873
+      type: 'test'
+      ...
+    # Subtest: TC-Contract-03: every claims error uses the standard envelope
+    ok 3 - TC-Contract-03: every claims error uses the standard envelope
+      ---
+      duration_ms: 12.728
+      type: 'test'
+      ...
+    # Subtest: TC-Contract-04: a client trace id is echoed so a request can be followed across logs
+    ok 4 - TC-Contract-04: a client trace id is echoed so a request can be followed across logs
+      ---
+      duration_ms: 1.6399
+      type: 'test'
+      ...
+    # Subtest: TC-Contract-05: malformed JSON on the claims route is a 400 envelope, not a 500
+    ok 5 - TC-Contract-05: malformed JSON on the claims route is a 400 envelope, not a 500
+      ---
+      duration_ms: 2.3406
+      type: 'test'
+      ...
+    1..5
+ok 6 - Claims API contract (SAD 4.3.2, 4.4)
+  ---
+  duration_ms: 746.7868
+  type: 'suite'
+  ...
+# Subtest: Claims API edge cases
+    # Subtest: TC-Claim-03: amount, date and policy-period validation return 422
+    ok 1 - TC-Claim-03: amount, date and policy-period validation return 422
+      ---
+      duration_ms: 140.5862
+      type: 'test'
+      ...
+    # Subtest: TC-Claim-04: claims cannot be filed on a cancelled policy
+    ok 2 - TC-Claim-04: claims cannot be filed on a cancelled policy
+      ---
+      duration_ms: 117.0185
+      type: 'test'
+      ...
+    # Subtest: TC-Claim-05: document checks: array only, at most 10, not empty, allowed types
+    ok 3 - TC-Claim-05: document checks: array only, at most 10, not empty, allowed types
+      ---
+      duration_ms: 131.3879
+      type: 'test'
+      ...
+    # Subtest: TC-Claim-06: PNG and JPEG evidence is accepted, filenames are sanitised, and no documents is allowed
+    ok 4 - TC-Claim-06: PNG and JPEG evidence is accepted, filenames are sanitised, and no documents is allowed
+      ---
+      duration_ms: 114.978
+      type: 'test'
+      ...
+    # Subtest: TC-Claim-07: claim lists are scoped by role and staff can filter by status
+    ok 5 - TC-Claim-07: claim lists are scoped by role and staff can filter by status
+      ---
+      duration_ms: 226.135
+      type: 'test'
+      ...
+    # Subtest: TC-Claim-08: agents file and list claims for customers in their portfolio
+    ok 6 - TC-Claim-08: agents file and list claims for customers in their portfolio
+      ---
+      duration_ms: 11.8387
+      type: 'test'
+      ...
+    # Subtest: TC-Claim-09: extra documents can be added to open claims only, by the claimant side only
+    ok 7 - TC-Claim-09: extra documents can be added to open claims only, by the claimant side only
+      ---
+      duration_ms: 106.9576
+      type: 'test'
+      ...
+    # Subtest: TC-WF-03: decision guards: unknown claim, wrong role step, invalid approved amount
+    ok 8 - TC-WF-03: decision guards: unknown claim, wrong role step, invalid approved amount
+      ---
+      duration_ms: 144.1567
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-08: settlement guards: unknown claim, not yet approved, wrong role
+    ok 9 - TC-Settle-08: settlement guards: unknown claim, not yet approved, wrong role
+      ---
+      duration_ms: 125.3131
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-09: remaining cover drops by the amount paid, and the next claim is capped and flagged
+    ok 10 - TC-Settle-09: remaining cover drops by the amount paid, and the next claim is capped and flagged
+      ---
+      duration_ms: 132.1345
+      type: 'test'
+      ...
+    # Subtest: TC-Claim-10: workflow event consumers ignore other processes and unknown claims, and clamp approved amounts
+    ok 11 - TC-Claim-10: workflow event consumers ignore other processes and unknown claims, and clamp approved amounts
+      ---
+      duration_ms: 106.3732
+      type: 'test'
+      ...
+    1..11
+ok 7 - Claims API edge cases
+  ---
+  duration_ms: 1947.9143
+  type: 'suite'
+  ...
+# Subtest: Claims security (STP 5.1)
+    # Subtest: TC-Sec-Claim-01: RBAC matrix: each role can reach only the claim endpoints its job needs
+    ok 1 - TC-Sec-Claim-01: RBAC matrix: each role can reach only the claim endpoints its job needs
+      ---
+      duration_ms: 54.9768
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Claim-02: every claim endpoint refuses anonymous and forged tokens
+    ok 2 - TC-Sec-Claim-02: every claim endpoint refuses anonymous and forged tokens
+      ---
+      duration_ms: 17.8488
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Claim-03: the claimant never sees fraud scores or internal tasks (agents: TC-Claim-08)
+    ok 3 - TC-Sec-Claim-03: the claimant never sees fraud scores or internal tasks (agents: TC-Claim-08)
+      ---
+      duration_ms: 2.909
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Claim-04: SQL and script injection strings are stored as plain text, never executed
+    ok 4 - TC-Sec-Claim-04: SQL and script injection strings are stored as plain text, never executed
+      ---
+      duration_ms: 21.4335
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Claim-05: uploaded filenames cannot carry paths or control characters
+    ok 5 - TC-Sec-Claim-05: uploaded filenames cannot carry paths or control characters
+      ---
+      duration_ms: 3.9635
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Claim-06: the amount must be a real number, not something JavaScript can coerce into one
+    ok 6 - TC-Sec-Claim-06: the amount must be a real number, not something JavaScript can coerce into one
+      ---
+      duration_ms: 31.5272
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-Claim-07: the adjuster's approved amount gets the same strict check
+    ok 7 - TC-Sec-Claim-07: the adjuster's approved amount gets the same strict check
+      ---
+      duration_ms: 9.2042
+      type: 'test'
+      ...
+    1..7
+ok 8 - Claims security (STP 5.1)
+  ---
+  duration_ms: 989.3216
+  type: 'suite'
+  ...
+# Subtest: Claims processing and workflow
+    # Subtest: TC-Claim-01: customer registers a claim with supporting documents and gets a claim ID
+    ok 1 - TC-Claim-01: customer registers a claim with supporting documents and gets a claim ID
+      ---
+      duration_ms: 130.6127
+      type: 'test'
+      ...
+    # Subtest: TC-Claim-02: invalid claims are rejected (size limit, file type, ownership, dates)
+    ok 2 - TC-Claim-02: invalid claims are rejected (size limit, file type, ownership, dates)
+      ---
+      duration_ms: 299.0878
+      type: 'test'
+      ...
+    # Subtest: TC-WF-01: low-value claim needs only adjuster approval; high-value also needs senior approval
+    ok 3 - TC-WF-01: low-value claim needs only adjuster approval; high-value also needs senior approval
+      ---
+      duration_ms: 118.0483
+      type: 'test'
+      ...
+    # Subtest: TC-WF-02: rejection ends the workflow and a newly deployed workflow version changes routing
+    ok 4 - TC-WF-02: rejection ends the workflow and a newly deployed workflow version changes routing
+      ---
+      duration_ms: 115.2658
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-01: duplicate claim raises a fraud flag and routes to fraud investigation
+    ok 5 - TC-Fraud-01: duplicate claim raises a fraud flag and routes to fraud investigation
+      ---
+      duration_ms: 104.7515
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-01: settlement amount matches the policy formula
+    ok 6 - TC-Settle-01: settlement amount matches the policy formula
+      ---
+      duration_ms: 112.7343
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-01: claimant is notified at every status change
+    ok 7 - TC-Notify-01: claimant is notified at every status change
+      ---
+      duration_ms: 108.2243
+      type: 'test'
+      ...
+    1..7
+ok 9 - Claims processing and workflow
+  ---
+  duration_ms: 1607.3841
+  type: 'suite'
+  ...
+# Subtest: Date validation (DEF-02)
+    # Subtest: TC-Date-01: real dates are accepted, including 29 February in a leap year
+    ok 1 - TC-Date-01: real dates are accepted, including 29 February in a leap year
+      ---
+      duration_ms: 1.4748
+      type: 'test'
+      ...
+    # Subtest: TC-Date-02: impossible dates are rejected instead of rolling over to the next month
+    ok 2 - TC-Date-02: impossible dates are rejected instead of rolling over to the next month
+      ---
+      duration_ms: 0.1338
+      type: 'test'
+      ...
+    # Subtest: TC-Date-03: wrong formats and types are rejected
+    ok 3 - TC-Date-03: wrong formats and types are rejected
+      ---
+      duration_ms: 0.1002
+      type: 'test'
+      ...
+    # Subtest: through the claims API
+        # Subtest: TC-Claim-11: a claim with incident date 30 February is refused with 422
+        ok 1 - TC-Claim-11: a claim with incident date 30 February is refused with 422
+          ---
+          duration_ms: 128.3392
+          type: 'test'
+          ...
+        1..1
+    ok 4 - through the claims API
+      ---
+      duration_ms: 747.3296
+      type: 'suite'
+      ...
+    1..4
+ok 10 - Date validation (DEF-02)
+  ---
+  duration_ms: 750.2379
+  type: 'suite'
+  ...
+# Subtest: PDF text encoding
+    # Subtest: TC-PDF-03: Latin accented names print as written; typographic punctuation is simplified (DEF-12)
+    ok 1 - TC-PDF-03: Latin accented names print as written; typographic punctuation is simplified (DEF-12)
+      ---
+      duration_ms: 1.097
+      type: 'test'
+      ...
+    # Subtest: TC-PDF-04: characters outside the PDF font (e.g. Devanagari) become ? instead of breaking the file
+    ok 2 - TC-PDF-04: characters outside the PDF font (e.g. Devanagari) become ? instead of breaking the file
+      ---
+      duration_ms: 0.25
+      type: 'test'
+      ...
+    1..2
+ok 11 - PDF text encoding
+  ---
+  duration_ms: 2.217
+  type: 'suite'
+  ...
+# Subtest: Policy documents with accented names
+    # Subtest: TC-Policy-03: the policy schedule shows the policyholder name exactly (DEF-12)
+    ok 1 - TC-Policy-03: the policy schedule shows the policyholder name exactly (DEF-12)
+      ---
+      duration_ms: 122.0572
+      type: 'test'
+      ...
+    1..1
+ok 12 - Policy documents with accented names
+  ---
+  duration_ms: 716.9138
+  type: 'suite'
+  ...
+# Subtest: Endorsement and cancellation payments
+    # Subtest: TC-Endorse-03: raising the sum insured collects the premium difference first (DEF-09)
+    ok 1 - TC-Endorse-03: raising the sum insured collects the premium difference first (DEF-09)
+      ---
+      duration_ms: 133.8737
+      type: 'test'
+      ...
+    # Subtest: TC-Endorse-05: lowering the sum insured refunds the difference; nominee changes cost nothing
+    ok 2 - TC-Endorse-05: lowering the sum insured refunds the difference; nominee changes cost nothing
+      ---
+      duration_ms: 107.5481
+      type: 'test'
+      ...
+    # Subtest: TC-Endorse-04: endorsement fields must be real strings and plain numbers (DEF-11)
+    ok 3 - TC-Endorse-04: endorsement fields must be real strings and plain numbers (DEF-11)
+      ---
+      duration_ms: 117.2791
+      type: 'test'
+      ...
+    # Subtest: TC-Cancel-03: cancelling after an early renewal refunds the unused old period plus the whole new period (DEF-10)
+    ok 4 - TC-Cancel-03: cancelling after an early renewal refunds the unused old period plus the whole new period (DEF-10)
+      ---
+      duration_ms: 109.2421
+      type: 'test'
+      ...
+    # Subtest: TC-Cancel-04: cancelling during a renewed period pro-rates that period's premium only (DEF-10)
+    ok 5 - TC-Cancel-04: cancelling during a renewed period pro-rates that period's premium only (DEF-10)
+      ---
+      duration_ms: 103.1456
+      type: 'test'
+      ...
+    # Subtest: TC-Cancel-05: the unused part of a paid endorsement is refunded on cancellation
+    ok 6 - TC-Cancel-05: the unused part of a paid endorsement is refunded on cancellation
+      ---
+      duration_ms: 112.5222
+      type: 'test'
+      ...
+    1..6
+ok 13 - Endorsement and cancellation payments
+  ---
+  duration_ms: 1289.4805
+  type: 'suite'
+  ...
+# Subtest: Fraud detection rules (IWA-F-022)
+    # Subtest: TC-Fraud-02: a clean claim fires no rule and is not flagged
+    ok 1 - TC-Fraud-02: a clean claim fires no rule and is not flagged
+      ---
+      duration_ms: 1.6548
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-03: DUPLICATE_CLAIM fires for the same type within 7 days, in either direction
+    ok 2 - TC-Fraud-03: DUPLICATE_CLAIM fires for the same type within 7 days, in either direction
+      ---
+      duration_ms: 1.1822
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-04: no duplicate at 8 days apart, for a different claim type, or against a rejected claim
+    ok 3 - TC-Fraud-04: no duplicate at 8 days apart, for a different claim type, or against a rejected claim
+      ---
+      duration_ms: 0.1624
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-05: EXCEEDS_REMAINING_COVER fires above the remaining cover and replaces HIGH_VALUE_RATIO
+    ok 4 - TC-Fraud-05: EXCEEDS_REMAINING_COVER fires above the remaining cover and replaces HIGH_VALUE_RATIO
+      ---
+      duration_ms: 0.2609
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-06: HIGH_VALUE_RATIO fires only above 80% of the sum insured
+    ok 5 - TC-Fraud-06: HIGH_VALUE_RATIO fires only above 80% of the sum insured
+      ---
+      duration_ms: 0.1458
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-07: EARLY_CLAIM fires for incidents up to 30 days after policy start
+    ok 6 - TC-Fraud-07: EARLY_CLAIM fires for incidents up to 30 days after policy start
+      ---
+      duration_ms: 0.1377
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-08: FREQUENT_CLAIMS fires for 2 or more non-rejected claims in the last 90 days
+    ok 7 - TC-Fraud-08: FREQUENT_CLAIMS fires for 2 or more non-rejected claims in the last 90 days
+      ---
+      duration_ms: 0.2357
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-09: NO_SUPPORTING_DOCUMENTS fires when nothing is uploaded (also the default)
+    ok 8 - TC-Fraud-09: NO_SUPPORTING_DOCUMENTS fires when nothing is uploaded (also the default)
+      ---
+      duration_ms: 0.1313
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-10: LATE_REPORTING fires only when reported more than 30 days after the incident
+    ok 9 - TC-Fraud-10: LATE_REPORTING fires only when reported more than 30 days after the incident
+      ---
+      duration_ms: 0.1309
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-11: points add up, the score is capped at 100 and the flag threshold is 50
+    ok 10 - TC-Fraud-11: points add up, the score is capped at 100 and the flag threshold is 50
+      ---
+      duration_ms: 0.2341
+      type: 'test'
+      ...
+    1..10
+ok 14 - Fraud detection rules (IWA-F-022)
+  ---
+  duration_ms: 5.3632
+  type: 'suite'
+  ...
+# Subtest: Settlement formula (IWA-F-023)
+    # Subtest: TC-Settle-02: health applies the 5,000 deductible and 10% co-pay
+    ok 1 - TC-Settle-02: health applies the 5,000 deductible and 10% co-pay
+      ---
+      duration_ms: 0.2116
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-03: motor, home and life use their own deductibles and no co-pay
+    ok 2 - TC-Settle-03: motor, home and life use their own deductibles and no co-pay
+      ---
+      duration_ms: 0.6927
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-04: the eligible amount is capped at the remaining cover after earlier payouts
+    ok 3 - TC-Settle-04: the eligible amount is capped at the remaining cover after earlier payouts
+      ---
+      duration_ms: 0.0911
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-05: nothing is payable when the cover is used up or the amount is under the deductible
+    ok 4 - TC-Settle-05: nothing is payable when the cover is used up or the amount is under the deductible
+      ---
+      duration_ms: 0.1437
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-06: amounts are rounded to 2 decimals
+    ok 5 - TC-Settle-06: amounts are rounded to 2 decimals
+      ---
+      duration_ms: 0.1551
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-07: an unknown coverage type is refused
+    ok 6 - TC-Settle-07: an unknown coverage type is refused
+      ---
+      duration_ms: 0.3857
+      type: 'test'
+      ...
+    1..6
+ok 15 - Settlement formula (IWA-F-023)
+  ---
+  duration_ms: 1.8395
+  type: 'suite'
+  ...
+# Subtest: Notification resilience (DEF-01)
+    # Subtest: TC-Notify-10: notifyCustomer resolves and still delivers in-app when contact details cannot be decrypted
+    ok 1 - TC-Notify-10: notifyCustomer resolves and still delivers in-app when contact details cannot be decrypted
+      ---
+      duration_ms: 103.3576
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-11: filing a claim for such a customer succeeds and the server keeps running
+    ok 2 - TC-Notify-11: filing a claim for such a customer succeeds and the server keeps running
+      ---
+      duration_ms: 343.6294
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-12: a claim goes through its whole lifecycle even if the notification service throws
+    ok 3 - TC-Notify-12: a claim goes through its whole lifecycle even if the notification service throws
+      ---
+      duration_ms: 192.9754
+      type: 'test'
+      ...
+    1..3
+ok 16 - Notification resilience (DEF-01)
+  ---
+  duration_ms: 1289.6683
+  type: 'suite'
+  ...
+# Subtest: Notification service
+    # Subtest: TC-Notify-02: a customer with email and phone gets in-app, email and SMS
+    ok 1 - TC-Notify-02: a customer with email and phone gets in-app, email and SMS
+      ---
+      duration_ms: 95.9595
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-03: channels follow the contact details on file
+    ok 2 - TC-Notify-03: channels follow the contact details on file
+      ---
+      duration_ms: 193.6502
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-04: an unknown customer is ignored without error
+    ok 3 - TC-Notify-04: an unknown customer is ignored without error
+      ---
+      duration_ms: 1.3483
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-05: the agent of an agent-managed customer gets an in-app copy
+    ok 4 - TC-Notify-05: the agent of an agent-managed customer gets an in-app copy
+      ---
+      duration_ms: 6.8807
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-06: a provider outage is retried, then recorded as FAILED without blocking other channels
+    ok 5 - TC-Notify-06: a provider outage is retried, then recorded as FAILED without blocking other channels
+      ---
+      duration_ms: 163.3056
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-07: a transient provider error succeeds on retry
+    ok 6 - TC-Notify-07: a transient provider error succeeds on retry
+      ---
+      duration_ms: 133.1173
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-08: role broadcast reaches only active users with that role
+    ok 7 - TC-Notify-08: role broadcast reaches only active users with that role
+      ---
+      duration_ms: 93.0164
+      type: 'test'
+      ...
+    # Subtest: TC-Notify-09: the inbox shows only your in-app messages and you can mark them read
+    ok 8 - TC-Notify-09: the inbox shows only your in-app messages and you can mark them read
+      ---
+      duration_ms: 201.9104
+      type: 'test'
+      ...
+    1..8
+ok 17 - Notification service
+  ---
+  duration_ms: 1491.8788
+  type: 'suite'
+  ...
+# Subtest: parseNumber (shared numeric input rule)
+    # Subtest: TC-Num-01: numbers and plain decimal strings are accepted
+    ok 1 - TC-Num-01: numbers and plain decimal strings are accepted
+      ---
+      duration_ms: 0.7591
+      type: 'test'
+      ...
+    # Subtest: TC-Num-02: values that only become numbers through coercion are rejected
+    ok 2 - TC-Num-02: values that only become numbers through coercion are rejected
+      ---
+      duration_ms: 0.1757
+      type: 'test'
+      ...
+    1..2
+ok 18 - parseNumber (shared numeric input rule)
+  ---
+  duration_ms: 1.7993
+  type: 'suite'
+  ...
+# Subtest: Numeric inputs through the API
+    # Subtest: TC-Quote-06: quote fields refuse coerced values (DEF-04)
+    ok 1 - TC-Quote-06: quote fields refuse coerced values (DEF-04)
+      ---
+      duration_ms: 14.4393
+      type: 'test'
+      ...
+    # Subtest: TC-Quote-07: numbers and numeric strings still produce the same quote
+    ok 2 - TC-Quote-07: numbers and numeric strings still produce the same quote
+      ---
+      duration_ms: 7.1391
+      type: 'test'
+      ...
+    # Subtest: TC-KYC-03: customer income refuses true, blank and other coerced values (DEF-05)
+    ok 3 - TC-KYC-03: customer income refuses true, blank and other coerced values (DEF-05)
+      ---
+      duration_ms: 202.7797
+      type: 'test'
+      ...
+    # Subtest: TC-KYC-04: a profile update keeps the old income when none is sent and refuses a coerced one
+    ok 4 - TC-KYC-04: a profile update keeps the old income when none is sent and refuses a coerced one
+      ---
+      duration_ms: 103.9416
+      type: 'test'
+      ...
+    # Subtest: TC-Endorse-02: a coerced sum insured cannot lower cover or trigger a refund (DEF-06)
+    ok 5 - TC-Endorse-02: a coerced sum insured cannot lower cover or trigger a refund (DEF-06)
+      ---
+      duration_ms: 125.5999
+      type: 'test'
+      ...
+    # Subtest: TC-Admin-02: the risk threshold refuses true, blank and arrays (DEF-07)
+    ok 6 - TC-Admin-02: the risk threshold refuses true, blank and arrays (DEF-07)
+      ---
+      duration_ms: 13.0054
+      type: 'test'
+      ...
+    1..6
+ok 19 - Numeric inputs through the API
+  ---
+  duration_ms: 1086.9388
+  type: 'suite'
+  ...
+# Subtest: Payments hardening
+    # Subtest: TC-Pay-03: a double-submitted premium payment charges once and issues one policy (DEF-08)
+    ok 1 - TC-Pay-03: a double-submitted premium payment charges once and issues one policy (DEF-08)
+      ---
+      duration_ms: 148.5185
+      type: 'test'
+      ...
+    # Subtest: TC-Pay-04: a double-submitted renewal charges once and extends the policy once (DEF-08)
+    ok 2 - TC-Pay-04: a double-submitted renewal charges once and extends the policy once (DEF-08)
+      ---
+      duration_ms: 129.54
+      type: 'test'
+      ...
+    # Subtest: TC-Pay-05: a failed payment releases the lock so the customer can retry
+    ok 3 - TC-Pay-05: a failed payment releases the lock so the customer can retry
+      ---
+      duration_ms: 123.6688
+      type: 'test'
+      ...
+    1..3
+ok 20 - Payments hardening
+  ---
+  duration_ms: 1019.5505
+  type: 'suite'
+  ...
+# Subtest: Performance (IWA-NF-001)
+    # Subtest: TC-Perf-01: quote and claim-status APIs respond within 2s at the 95th percentile
+    ok 1 - TC-Perf-01: quote and claim-status APIs respond within 2s at the 95th percentile
+      ---
+      duration_ms: 656.4579
+      type: 'test'
+      ...
+    1..1
+ok 21 - Performance (IWA-NF-001)
+  ---
+  duration_ms: 1258.7985
+  type: 'suite'
+  ...
+# Subtest: Unit: workflow, resilience, PDF
+    # Subtest: expression evaluator handles comparisons, logic and rejects code
+    ok 1 - expression evaluator handles comparisons, logic and rejects code
+      ---
+      duration_ms: 0.4227
+      type: 'test'
+      ...
+    # Subtest: BPMN validator catches structural errors
+    ok 2 - BPMN validator catches structural errors
+      ---
+      duration_ms: 0.4977
+      type: 'test'
+      ...
+    # Subtest: circuit breaker opens after repeated failures and half-opens after the reset window
+    ok 3 - circuit breaker opens after repeated failures and half-opens after the reset window
+      ---
+      duration_ms: 0.3395
+      type: 'test'
+      ...
+    # Subtest: retry uses exponential backoff and stops on non-retryable errors
+    ok 4 - retry uses exponential backoff and stops on non-retryable errors
+      ---
+      duration_ms: 9.5774
+      type: 'test'
+      ...
+    # Subtest: PDF writer produces a structurally valid multi-page document
+    ok 5 - PDF writer produces a structurally valid multi-page document
+      ---
+      duration_ms: 0.4994
+      type: 'test'
+      ...
+    1..5
+ok 22 - Unit: workflow, resilience, PDF
+  ---
+  duration_ms: 11.5129
+  type: 'suite'
+  ...
+# Subtest: Policies, payments and documents: edge cases
+    # Subtest: TC-Doc-01: documents are readable only by their owner, the owner's agent and staff
+    ok 1 - TC-Doc-01: documents are readable only by their owner, the owner's agent and staff
+      ---
+      duration_ms: 236.6254
+      type: 'test'
+      ...
+    # Subtest: TC-Doc-02: the signing public key is published and uploaded evidence is reported as unsigned
+    ok 2 - TC-Doc-02: the signing public key is published and uploaded evidence is reported as unsigned
+      ---
+      duration_ms: 126.1022
+      type: 'test'
+      ...
+    # Subtest: TC-Pay-06: payment requests are validated before any charge
+    ok 3 - TC-Pay-06: payment requests are validated before any charge
+      ---
+      duration_ms: 330.0968
+      type: 'test'
+      ...
+    # Subtest: TC-Pay-07: payment history is scoped to the customer, the agent's portfolio and finance staff
+    ok 4 - TC-Pay-07: payment history is scoped to the customer, the agent's portfolio and finance staff
+      ---
+      duration_ms: 121.5191
+      type: 'test'
+      ...
+    # Subtest: TC-Pay-08: refunds and payouts reject invalid amounts
+    ok 5 - TC-Pay-08: refunds and payouts reject invalid amounts
+      ---
+      duration_ms: 70.59
+      type: 'test'
+      ...
+    # Subtest: TC-Renew-04: renewal is refused for cancelled, lapsed, too-old or unpaid requests
+    ok 6 - TC-Renew-04: renewal is refused for cancelled, lapsed, too-old or unpaid requests
+      ---
+      duration_ms: 119.8184
+      type: 'test'
+      ...
+    # Subtest: TC-Renew-03: the reminder job marks policies past their end date as expired
+    ok 7 - TC-Renew-03: the reminder job marks policies past their end date as expired
+      ---
+      duration_ms: 112.4377
+      type: 'test'
+      ...
+    # Subtest: TC-Endorse-06: endorsement limits and states
+    ok 8 - TC-Endorse-06: endorsement limits and states
+      ---
+      duration_ms: 117.3148
+      type: 'test'
+      ...
+    # Subtest: TC-Policy-04: policy lists are scoped by role and policies can be looked up by number
+    ok 9 - TC-Policy-04: policy lists are scoped by role and policies can be looked up by number
+      ---
+      duration_ms: 116.2828
+      type: 'test'
+      ...
+    # Subtest: TC-PDF-05: the PDF writer wraps unbroken text and breaks pages inside wrapped lines
+    ok 10 - TC-PDF-05: the PDF writer wraps unbroken text and breaks pages inside wrapped lines
+      ---
+      duration_ms: 0.3618
+      type: 'test'
+      ...
+    1..10
+ok 23 - Policies, payments and documents: edge cases
+  ---
+  duration_ms: 1994.4408
+  type: 'suite'
+  ...
+# Subtest: Policy cancellation and pro-rata refund
+    # Subtest: TC-Cancel-01: cancelling an active policy refunds the unexpired premium
+    ok 1 - TC-Cancel-01: cancelling an active policy refunds the unexpired premium
+      ---
+      duration_ms: 144.8699
+      type: 'test'
+      ...
+    # Subtest: TC-Cancel-02: cancellation is rejected for non-active, expired or invalid requests
+    ok 2 - TC-Cancel-02: cancellation is rejected for non-active, expired or invalid requests
+      ---
+      duration_ms: 329.3489
+      type: 'test'
+      ...
+    1..2
+ok 24 - Policy cancellation and pro-rata refund
+  ---
+  duration_ms: 1077.7024
+  type: 'suite'
+  ...
+# Subtest: Policy Reinstatement and Cancellation Quotes (Sprint 4)
+    # Subtest: TC-Reinstate-01: Preview cancellation quote calculates pro-rata refund and fee
+    ok 1 - TC-Reinstate-01: Preview cancellation quote calculates pro-rata refund and fee
+      ---
+      duration_ms: 125.4295
+      type: 'test'
+      ...
+    # Subtest: TC-Reinstate-02: Cancellation quote rejects if policy is already expired or cancelled
+    ok 2 - TC-Reinstate-02: Cancellation quote rejects if policy is already expired or cancelled
+      ---
+      duration_ms: 121.1051
+      type: 'test'
+      ...
+    # Subtest: TC-Reinstate-03: Reinstatement of expired policy within 30 days succeeds with fee and health declaration
+    ok 3 - TC-Reinstate-03: Reinstatement of expired policy within 30 days succeeds with fee and health declaration
+      ---
+      duration_ms: 120.2547
+      type: 'test'
+      ...
+    # Subtest: TC-Reinstate-04: Reinstatement fails when health declaration is false or omitted
+    ok 4 - TC-Reinstate-04: Reinstatement fails when health declaration is false or omitted
+      ---
+      duration_ms: 114.7061
+      type: 'test'
+      ...
+    # Subtest: TC-Reinstate-05: Reinstatement fails when grace period (>30 days) has passed
+    ok 5 - TC-Reinstate-05: Reinstatement fails when grace period (>30 days) has passed
+      ---
+      duration_ms: 105.7177
+      type: 'test'
+      ...
+    # Subtest: TC-Reinstate-06: Reinstatement fails if policy is currently ACTIVE
+    ok 6 - TC-Reinstate-06: Reinstatement fails if policy is currently ACTIVE
+      ---
+      duration_ms: 111.7262
+      type: 'test'
+      ...
+    1..6
+ok 25 - Policy Reinstatement and Cancellation Quotes (Sprint 4)
+  ---
+  duration_ms: 1295.2863
+  type: 'suite'
+  ...
+# Subtest: Policy issuance and management
+    # Subtest: TC-Policy-01: successful payment issues a policy with a signed PDF
+    ok 1 - TC-Policy-01: successful payment issues a policy with a signed PDF
+      ---
+      duration_ms: 138.4407
+      type: 'test'
+      ...
+    # Subtest: TC-Policy-02: no policy is issued when payment fails, and retries recover transient failures
+    ok 2 - TC-Policy-02: no policy is issued when payment fails, and retries recover transient failures
+      ---
+      duration_ms: 160.6144
+      type: 'test'
+      ...
+    # Subtest: TC-Invoice-01: invoice PDF with tax breakup is generated and stored
+    ok 3 - TC-Invoice-01: invoice PDF with tax breakup is generated and stored
+      ---
+      duration_ms: 117.1482
+      type: 'test'
+      ...
+    # Subtest: TC-Renew-01: reminders are sent 30, 15 and 7 days before expiry, once each
+    ok 4 - TC-Renew-01: reminders are sent 30, 15 and 7 days before expiry, once each
+      ---
+      duration_ms: 140.9946
+      type: 'test'
+      ...
+    # Subtest: policy renewal extends the period after payment
+    ok 5 - policy renewal extends the period after payment
+      ---
+      duration_ms: 110.3698
+      type: 'test'
+      ...
+    # Subtest: TC-Endorse-01: endorsement is applied and recorded in the audit trail
+    ok 6 - TC-Endorse-01: endorsement is applied and recorded in the audit trail
+      ---
+      duration_ms: 128.7342
+      type: 'test'
+      ...
+    1..6
+ok 26 - Policy issuance and management
+  ---
+  duration_ms: 1397.4196
+  type: 'suite'
+  ...
+# Subtest: Quote generation (IWA-F-001)
+    # Subtest: TC-Quote-01: quote returned with premium breakdown within 10 seconds
+    ok 1 - TC-Quote-01: quote returned with premium breakdown within 10 seconds
+      ---
+      duration_ms: 4.8458
+      type: 'test'
+      ...
+    # Subtest: TC-Quote-02: invalid input is rejected with 400 and the error envelope
+    ok 2 - TC-Quote-02: invalid input is rejected with 400 and the error envelope
+      ---
+      duration_ms: 9.9286
+      type: 'test'
+      ...
+    # Subtest: premium is personalized by age, smoking and term
+    ok 3 - premium is personalized by age, smoking and term
+      ---
+      duration_ms: 0.2508
+      type: 'test'
+      ...
+    # Subtest: actuarial outage returns 503
+    ok 4 - actuarial outage returns 503
+      ---
+      duration_ms: 2.3705
+      type: 'test'
+      ...
+    1..4
+ok 27 - Quote generation (IWA-F-001)
+  ---
+  duration_ms: 629.3227
+  type: 'suite'
+  ...
+# Subtest: Underwriting and KYC (IWA-F-002, IWA-F-003)
+    # Subtest: TC-UW-01: risk score is bounded 0-100 and rules fire
+    ok 1 - TC-UW-01: risk score is bounded 0-100 and rules fire
+      ---
+      duration_ms: 0.5673
+      type: 'test'
+      ...
+    # Subtest: TC-UW-01: low-risk applications auto-approve, high-risk go to manual review per threshold
+    ok 2 - TC-UW-01: low-risk applications auto-approve, high-risk go to manual review per threshold
+      ---
+      duration_ms: 123.9555
+      type: 'test'
+      ...
+    # Subtest: threshold is configurable by admin
+    ok 3 - threshold is configurable by admin
+      ---
+      duration_ms: 112.0007
+      type: 'test'
+      ...
+    # Subtest: TC-KYC-01: KYC pass and fail results are returned before issuance
+    ok 4 - TC-KYC-01: KYC pass and fail results are returned before issuance
+      ---
+      duration_ms: 203.1347
+      type: 'test'
+      ...
+    # Subtest: KYC provider outage routes to manual queue, underwriter resolves it, application resumes
+    ok 5 - KYC provider outage routes to manual queue, underwriter resolves it, application resumes
+      ---
+      duration_ms: 127.8326
+      type: 'test'
+      ...
+    # Subtest: expired or reused quotes cannot be applied
+    ok 6 - expired or reused quotes cannot be applied
+      ---
+      duration_ms: 100.9418
+      type: 'test'
+      ...
+    1..6
+ok 28 - Underwriting and KYC (IWA-F-002, IWA-F-003)
+  ---
+  duration_ms: 1189.5691
+  type: 'suite'
+  ...
+# Subtest: Renewals due report and renewal pipeline metrics
+    # Subtest: TC-Renewal-Report-01: renewals report lists active policies by soonest expiry with days-to-expiry
+    ok 1 - TC-Renewal-Report-01: renewals report lists active policies by soonest expiry with days-to-expiry
+      ---
+      duration_ms: 250.9474
+      type: 'test'
+      ...
+    # Subtest: TC-Renewal-Report-02: renewals report renders as PDF and is admin-only
+    ok 2 - TC-Renewal-Report-02: renewals report renders as PDF and is admin-only
+      ---
+      duration_ms: 4.2109
+      type: 'test'
+      ...
+    # Subtest: TC-Renewal-Report-03: dashboard exposes the renewal pipeline (overdue and window-open)
+    ok 3 - TC-Renewal-Report-03: dashboard exposes the renewal pipeline (overdue and window-open)
+      ---
+      duration_ms: 114.8394
+      type: 'test'
+      ...
+    1..3
+ok 29 - Renewals due report and renewal pipeline metrics
+  ---
+  duration_ms: 971.2053
+  type: 'suite'
+  ...
+# Subtest: Signed settlement letter (SR-005, F-023)
+    # Subtest: TC-Settle-10: the letter is a PDF that states the claim, the deductions and the amount paid
+    ok 1 - TC-Settle-10: the letter is a PDF that states the claim, the deductions and the amount paid
+      ---
+      duration_ms: 2.922
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-11: the signature verifies independently with the published public key
+    ok 2 - TC-Settle-11: the signature verifies independently with the published public key
+      ---
+      duration_ms: 4.4952
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-12: changing the amount paid in the stored letter breaks the signature
+    ok 3 - TC-Settle-12: changing the amount paid in the stored letter breaks the signature
+      ---
+      duration_ms: 2.6609
+      type: 'test'
+      ...
+    # Subtest: TC-Settle-13: only the claimant and staff can download the letter
+    ok 4 - TC-Settle-13: only the claimant and staff can download the letter
+      ---
+      duration_ms: 97.6105
+      type: 'test'
+      ...
+    1..4
+ok 30 - Signed settlement letter (SR-005, F-023)
+  ---
+  duration_ms: 874.5174
+  type: 'suite'
+  ...
+# Subtest: Sprint 4 Security, Fraud Detection & Claims Export
+    # Subtest: TC-Cust-03: Customer can update emergency contact details with validation and audit
+    ok 1 - TC-Cust-03: Customer can update emergency contact details with validation and audit
+      ---
+      duration_ms: 103.3897
+      type: 'test'
+      ...
+    # Subtest: TC-Fraud-12: RAPID_INCEPTION_HIGH_VALUE rule triggers when high claim occurs within 14 days of inception
+    ok 2 - TC-Fraud-12: RAPID_INCEPTION_HIGH_VALUE rule triggers when high claim occurs within 14 days of inception
+      ---
+      duration_ms: 0.3604
+      type: 'test'
+      ...
+    # Subtest: TC-Report-02: Adjuster can export claims register CSV with filtering; Customer is forbidden
+    ok 3 - TC-Report-02: Adjuster can export claims register CSV with filtering; Customer is forbidden
+      ---
+      duration_ms: 136.024
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-XSS-01: claim text is stored exactly as written and returned only as JSON data (DEF-16)
+    ok 4 - TC-Sec-XSS-01: claim text is stored exactly as written and returned only as JSON data (DEF-16)
+      ---
+      duration_ms: 124.2959
+      type: 'test'
+      ...
+    1..4
+ok 31 - Sprint 4 Security, Fraud Detection & Claims Export
+  ---
+  duration_ms: 989.4341
+  type: 'suite'
+  ...
+# Subtest: Web UI accessibility (IWA-NF-005)
+    # Subtest: TC-UX-01: the sign-in screen has no WCAG A/AA violations
+    ok 1 - TC-UX-01: the sign-in screen has no WCAG A/AA violations
+      ---
+      duration_ms: 374.5996
+      type: 'test'
+      ...
+    # Subtest: TC-UX-02: every customer screen has no WCAG A/AA violations
+    ok 2 - TC-UX-02: every customer screen has no WCAG A/AA violations
+      ---
+      duration_ms: 1469.1232
+      type: 'test'
+      ...
+    # Subtest: TC-UX-02: every agent screen has no WCAG A/AA violations
+    ok 3 - TC-UX-02: every agent screen has no WCAG A/AA violations
+      ---
+      duration_ms: 1097.2814
+      type: 'test'
+      ...
+    # Subtest: TC-UX-02: every underwriter screen has no WCAG A/AA violations
+    ok 4 - TC-UX-02: every underwriter screen has no WCAG A/AA violations
+      ---
+      duration_ms: 826.6297
+      type: 'test'
+      ...
+    # Subtest: TC-UX-02: every adjuster screen has no WCAG A/AA violations
+    ok 5 - TC-UX-02: every adjuster screen has no WCAG A/AA violations
+      ---
+      duration_ms: 837.2881
+      type: 'test'
+      ...
+    # Subtest: TC-UX-02: every admin screen has no WCAG A/AA violations
+    ok 6 - TC-UX-02: every admin screen has no WCAG A/AA violations
+      ---
+      duration_ms: 1897.8278
+      type: 'test'
+      ...
+    # Subtest: TC-UX-06: no screen shows placeholder text such as "null" or "[object HTMLDivElement]" (DEF-17)
+    ok 7 - TC-UX-06: no screen shows placeholder text such as "null" or "[object HTMLDivElement]" (DEF-17)
+      ---
+      duration_ms: 3242.9984
+      type: 'test'
+      ...
+    # Subtest: TC-UX-03: keyboard users get a skip link, a labelled language switch and a polite live region
+    ok 8 - TC-UX-03: keyboard users get a skip link, a labelled language switch and a polite live region
+      ---
+      duration_ms: 115.2758
+      type: 'test'
+      ...
+    # Subtest: TC-Sec-XSS-02: markup in a claim description is shown as text in the UI and never becomes HTML (DEF-16)
+    ok 9 - TC-Sec-XSS-02: markup in a claim description is shown as text in the UI and never becomes HTML (DEF-16)
+      ---
+      duration_ms: 202.7403
+      type: 'test'
+      ...
+    # Subtest: TC-UX-05: Log out revokes the session token on the server, not just in the browser (DEF-14)
+    ok 10 - TC-UX-05: Log out revokes the session token on the server, not just in the browser (DEF-14)
+      ---
+      duration_ms: 686.855
+      type: 'test'
+      ...
+    1..10
+ok 32 - Web UI accessibility (IWA-NF-005)
+  ---
+  duration_ms: 11358.048
+  type: 'suite'
+  ...
+# Subtest: Colour contrast (WCAG 1.4.3 / 1.4.11)
+    # Subtest: TC-UX-04: light theme text meets 4.5:1 and the focus ring meets 3:1
+    ok 1 - TC-UX-04: light theme text meets 4.5:1 and the focus ring meets 3:1
+      ---
+      duration_ms: 0.9328
+      type: 'test'
+      ...
+    # Subtest: TC-UX-04: dark theme text meets 4.5:1 and the focus ring meets 3:1
+    ok 2 - TC-UX-04: dark theme text meets 4.5:1 and the focus ring meets 3:1
+      ---
+      duration_ms: 0.2027
+      type: 'test'
+      ...
+    1..2
+ok 33 - Colour contrast (WCAG 1.4.3 / 1.4.11)
+  ---
+  duration_ms: 1.3133
+  type: 'suite'
+  ...
+1..33
+# tests 171
+# suites 34
+# pass 171
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 51382.1445
+-------------------|---------|----------|---------|---------|-------------------------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                   
+-------------------|---------|----------|---------|---------|-------------------------------------
+All files          |   96.46 |    85.83 |    95.1 |   96.46 |                                     
+ src               |      80 |       90 |   71.42 |      80 |                                     
+  app.js           |     100 |      100 |     100 |     100 |                                     
+  seed.js          |     100 |       75 |     100 |     100 | 17                                  
+  server.js        |   36.48 |    66.66 |   33.33 |   36.48 | 23-26,28-65,68-72                   
+ src/core          |   97.94 |    88.88 |   93.87 |   97.94 |                                     
+  config.js        |     100 |      100 |     100 |     100 |                                     
+  db.js            |    99.1 |    93.75 |     100 |    99.1 | 324-326                             
+  errors.js        |     100 |       80 |     100 |     100 | 22,24,27-28                         
+  events.js        |   90.32 |    71.42 |      75 |   90.32 | 19-21                               
+  logger.js        |   85.18 |    77.77 |      75 |   85.18 | 12-15                               
+  resilience.js    |     100 |      100 |     100 |     100 |                                     
+  util.js          |   96.36 |     90.9 |     100 |   96.36 | 51-52                               
+ src/modules       |   97.88 |     87.2 |   95.23 |   97.88 |                                     
+  admin.js         |   98.25 |    80.76 |   91.66 |   98.25 | 25-27                               
+  claims.js        |     100 |    96.59 |     100 |     100 | 28,30,69,231,270                    
+  customers.js     |    92.3 |    74.13 |      90 |    92.3 | 113-114,124-125,147-156,164,190-191 
+  documents.js     |     100 |       92 |     100 |     100 | 50,86                               
+  fraud.js         |     100 |      100 |     100 |     100 |                                     
+  notifications.js |     100 |      100 |     100 |     100 |                                     
+  payments.js      |     100 |    95.23 |     100 |     100 | 106,157,165                         
+  pdf.js           |     100 |     93.1 |     100 |     100 | 15,47                               
+  policies.js      |     100 |    93.05 |     100 |     100 | 116-117,186,273,290,345,431,440,444 
+  quotes.js        |   86.87 |    88.23 |   78.57 |   86.87 | 23,91-92,121-123,136-145,149-153    
+  settlement.js    |     100 |      100 |     100 |     100 |                                     
+  underwriting.js  |   99.43 |    78.02 |     100 |   99.43 | 121                                 
+  users.js         |   97.64 |    71.83 |   85.71 |   97.64 | 150-153                             
+ src/security      |   97.57 |    84.55 |   97.22 |   97.57 |                                     
+  audit.js         |     100 |     82.6 |     100 |     100 | 18,37-38,53                         
+  auth.js          |   98.21 |    81.08 |    92.3 |   98.21 | 46-47                               
+  crypto.js        |   91.66 |    81.25 |     100 |   91.66 | 12-13,39-40                         
+  middleware.js    |   97.61 |    90.32 |     100 |   97.61 | 78-79                               
+  pii.js           |     100 |     87.5 |     100 |     100 | 8-9                                 
+ src/workflow      |   95.37 |    77.58 |     100 |   95.37 |                                     
+  bpmn.js          |   96.52 |    73.33 |     100 |   96.52 | 87-88,92-93                         
+  engine.js        |    93.1 |    74.07 |     100 |    93.1 | 80-81,84,95,150,154-160,188-189     
+  expression.js    |   98.92 |       85 |     100 |   98.92 | 44                                  
+-------------------|---------|----------|---------|---------|-------------------------------------

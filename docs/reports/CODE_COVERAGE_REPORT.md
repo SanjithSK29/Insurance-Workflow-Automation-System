@@ -9,7 +9,32 @@
 | Scope | Every file under `src/` (`all: true`, so files no test loads still count) |
 | Build under test | Branch `vishal-input-validation` (= `main` at `b4c18dd` + PR #9 + PR #10 + PR #11) |
 | Executed on | 17-11-2026, Node.js v25.2.0, Windows 11; repeated by the CI job "Coverage report (c8)" on Node.js 22 |
-| Result | **94.68 % statements, 93.53 % functions, 94.68 % lines** (branches: [Branch Coverage Report](BRANCH_COVERAGE_REPORT.md)) |
+| Result | **Final run 19-11-2026: 96.46 % statements, 95.10 % functions, 96.46 % lines** (branches 85.83 %: [Branch Coverage Report](BRANCH_COVERAGE_REPORT.md)). QA cycle 17-11-2026: 94.68 / 93.53 / 94.68 %. |
+
+## 0. Final run (19-11-2026)
+
+`main` at `aab6199` (PR #16) + branch `samarth-final-deliverables` (DEF-17 fix, TC-UX-06); 171 tests; `npm run test:coverage` (c8, `all: true`). CI fails below 93 % statements / 92 % functions / 93 % lines.
+
+| Metric | Covered | Percent | QA cycle (17-11) |
+| --- | --- | --- | --- |
+| Statements | 3600 / 3732 | **96.46 %** | 94.68 % |
+| Functions | 233 / 245 | **95.10 %** | 93.53 % |
+| Lines | 3600 / 3732 | **96.46 %** | 94.68 % |
+
+Lowest statement coverage (all other files are higher):
+
+| File | Statements | Functions |
+| --- | --- | --- |
+| `src/server.js` | 36.48 % | 33.33 % |
+| `src/core/logger.js` | 85.18 % | 75.00 % |
+| `src/modules/quotes.js` | 86.87 % | 78.57 % |
+| `src/core/events.js` | 90.32 % | 75.00 % |
+| `src/security/crypto.js` | 91.66 % | 100.00 % |
+| `src/modules/customers.js` | 92.30 % | 90.00 % |
+| `src/workflow/engine.js` | 93.10 % | 100.00 % |
+| `src/core/util.js` | 96.36 % | 100.00 % |
+
+`server.js` and `seed.js` are exercised by starting the real process (CI smoke test, Docker health check, the UI tests' seeded data and the sprint videos) rather than by unit tests; see section 4 below.
 
 ## 1. Overall
 
