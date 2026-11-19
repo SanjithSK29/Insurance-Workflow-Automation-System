@@ -13,8 +13,10 @@
 // It creates the project "IWAS Backlog" with:
 //   - a Sprint iteration field: Sprint 1-4 on the real sprint dates
 //   - Story points (number) and Owner (single select) fields
-//   - one item per backlog row in docs/SPRINTS.md, with sprint, points, owner,
-//     requirement and delivering PR, assigned to the owner's GitHub account
+//   - one item per backlog row in docs/SPRINTS.md. Each row uses its existing
+//     repository issue ("[Sprint N] <requirement>: <item>"); rows without an
+//     issue get one, created in the same format and closed as completed.
+//     Issues are assigned to the owner's GitHub account.
 //   - Status = Done (every row has been delivered)
 // and links the project to SanjithSK29/Insurance-Workflow-Automation-System.
 const fs = require('node:fs');
@@ -71,7 +73,44 @@ function gql(query, variables = {}) {
   return res.data;
 }
 
-function main() {
+// ---------------------------------------------------------------- existing backlog issues
+const issueTitle = (it) => `[${it.sprint}] ${it.requirement}: ${it.title}`;
+const norm = (s) => s.toLowerCase().replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
+
+// Issues (not PRs) of the repository, open and closed. The dry run uses the
+// public API so it works before `gh auth login`.
+async function listIssues() {
+  const all = [];
+  for (let page = 1; page <= 10; page++) {
+    const url = `repos/${OWNER}/${REPO}/issues?state=all&per_page=100&page=${page}`;
+    let batch;
+    if (DRY_RUN) {
+      const res = await fetch(`https://api.github.com/${url}`, { headers: { Accept: 'application/vnd.github+json' } });
+      if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
+      batch = await res.json();
+    } else {
+      batch = JSON.parse(execFileSync('gh', ['api', url], { encoding: 'utf8' }));
+    }
+    all.push(...batch.filter((i) => !i.pull_request));
+    if (batch.length < 100) break;
+  }
+  return all;
+}
+
+// Pair each backlog row with its issue: same "[Sprint N]" prefix and the row's
+// item text in the issue title.
+function matchIssues(items, issues) {
+  const used = new Set();
+  for (const it of items) {
+    const prefix = norm(`[${it.sprint}]`);
+    const want = norm(it.title);
+    const hit = issues.find((i) => !used.has(i.number) && norm(i.title).startsWith(prefix) && norm(i.title).includes(want));
+    if (hit) { it.issue = hit; used.add(hit.number); }
+  }
+  return issues.filter((i) => /^\[Sprint \d\]/.test(i.title) && !used.has(i.number));
+}
+
+async function main() {
   const items = readBacklog();
   const owners = [...new Set(items.map((i) => i.owner))];
   console.log(`${items.length} backlog items, ${items.reduce((s, i) => s + i.points, 0)} story points`);
@@ -80,8 +119,14 @@ function main() {
     console.log(`  ${s.title} (${s.startDate}, ${s.duration} day(s)): ${rows.length} items, ${rows.reduce((t, i) => t + i.points, 0)} SP`);
   }
   console.log(`  owners: ${owners.map((o) => `${o} (${items.find((i) => i.owner === o).login || 'no login'})`).join(', ')}`);
+
+  const unmatched = matchIssues(items, await listIssues());
+  const missing = items.filter((i) => !i.issue);
+  console.log(`  existing issues used: ${items.length - missing.length}; issues to create: ${missing.length}`);
+  for (const i of missing) console.log(`    + ${issueTitle(i)}`);
+  if (unmatched.length) console.log(`  sprint issues not in docs/SPRINTS.md (left off the board): ${unmatched.map((i) => `#${i.number}`).join(', ')}`);
   if (DRY_RUN) {
-    for (const i of items) console.log(`  [${i.sprint}] ${i.points} SP  ${i.owner.padEnd(9)} ${i.title}`);
+    for (const i of items) console.log(`  [${i.sprint}] ${String(i.points).padStart(2)} SP  ${i.owner.padEnd(9)} ${i.issue ? `#${i.issue.number}` : 'new'}  ${i.title}`);
     console.log('\nDry run: nothing was created.');
     return;
   }
@@ -119,35 +164,37 @@ function main() {
   const status = fields.find((f) => f && f.name === 'Status');
   const done = status && status.options.find((o) => o.name === 'Done');
 
-  const userIds = {};
-  for (const login of new Set(items.map((i) => i.login).filter(Boolean))) {
-    try { userIds[login] = gql(`query($l:String!){ user(login:$l){ id } }`, { l: login }).user.id; } catch { /* account not found: owner field still set */ }
-  }
-
   const setField = (itemId, fieldId, value) => gql(`mutation($p:ID!,$i:ID!,$f:ID!,$v:ProjectV2FieldValue!){ updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,value:$v}){ projectV2Item { id } } }`,
     { p: project.id, i: itemId, f: fieldId, v: value });
 
+  const rest = (method, url, body) => JSON.parse(execFileSync('gh', ['api', '-X', method, url, '--input', '-'], { input: JSON.stringify(body || {}), encoding: 'utf8' }) || '{}');
+
   for (const [n, it] of items.entries()) {
-    const body = [`**Requirement:** ${it.requirement}`, `**Owner:** ${it.owner}${it.login ? ` (@${it.login})` : ''}`, `**Story points:** ${it.points}`,
-      `**Delivered in:** ${it.deliveredIn} on ${it.date}`, '', 'Source: docs/SPRINTS.md'].join('\n');
-    const add = (assignees) => gql(`mutation($p:ID!,$t:String!,$b:String,$a:[ID!]){ addProjectV2DraftIssue(input:{projectId:$p,title:$t,body:$b,assigneeIds:$a}){ projectItem { id } } }`,
-      { p: project.id, t: `${it.title} (${it.requirement})`, b: body, a: assignees }).addProjectV2DraftIssue.projectItem.id;
-    let itemId;
-    try { itemId = add(it.login && userIds[it.login] ? [userIds[it.login]] : []); } catch { itemId = add([]); }
+    if (!it.issue) {
+      // Backlog row without an issue: create it like the others, closed as delivered.
+      const body = [`**Requirement:** ${it.requirement}`, `**Owner:** ${it.owner}`, `**Story points:** ${it.points}`,
+        `**Delivered in:** ${it.deliveredIn} on ${it.date}`, '', 'Source: docs/SPRINTS.md'].join('\n');
+      it.issue = rest('POST', `repos/${OWNER}/${REPO}/issues`, { title: issueTitle(it), body });
+      rest('PATCH', `repos/${OWNER}/${REPO}/issues/${it.issue.number}`, { state: 'closed', state_reason: 'completed' });
+      console.log(`  created #${it.issue.number} ${issueTitle(it)}`);
+    }
+    if (it.login && !(it.issue.assignees || []).some((a) => a.login === it.login)) {
+      try { rest('POST', `repos/${OWNER}/${REPO}/issues/${it.issue.number}/assignees`, { assignees: [it.login] }); } catch { /* not a collaborator: Owner field still set */ }
+    }
+    const itemId = gql(`mutation($p:ID!,$c:ID!){ addProjectV2ItemById(input:{projectId:$p,contentId:$c}){ item { id } } }`,
+      { p: project.id, c: it.issue.node_id }).addProjectV2ItemById.item.id;
     setField(itemId, sprintField.id, sprintField.kind === 'iteration' ? { iterationId: sprintField.options[it.sprint] } : { singleSelectOptionId: sprintField.options[it.sprint] });
     setField(itemId, pointsField.id, { number: it.points });
     setField(itemId, ownerField.id, { singleSelectOptionId: ownerOption[it.owner] });
     if (done) setField(itemId, status.id, { singleSelectOptionId: done.id });
-    console.log(`  ${String(n + 1).padStart(2)}/${items.length} [${it.sprint}] ${it.title}`);
+    console.log(`  ${String(n + 1).padStart(2)}/${items.length} #${it.issue.number} [${it.sprint}] ${it.title}`);
   }
 
   gql(`mutation($p:ID!,$r:ID!){ linkProjectV2ToRepository(input:{projectId:$p,repositoryId:$r}){ repository { id } } }`, { p: project.id, r: ids.repository.id });
   console.log(`\nLinked to ${OWNER}/${REPO}. Open ${project.url} and group the board by "Sprint".`);
 }
 
-try {
-  main();
-} catch (err) {
+main().catch((err) => {
   console.error(`\nFailed: ${err.message}`);
   process.exit(1);
-}
+});
