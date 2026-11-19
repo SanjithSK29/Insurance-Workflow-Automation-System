@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SAD v2.0 - Insurance Workflow Automation System</title>
+<!--STYLE-->
+</head>
+<body>
+
+<section class="title-page">
+  <div class="doc-type">Software Architecture and Design Specification (SAD)</div>
+  <h1>Insurance Workflow Automation System (IWAS)</h1>
+  <p>IEEE 42010 / IEEE 1016 structure, following the course SAD template.</p>
+  <table>
+    <tr><th>Version</th><td>2.0 (as built after Sprints 1–4)</td></tr>
+    <tr><th>Authors</th><td>Sanjith Suresh Kumar (Lead), Sakaray Vishal, Samarth A, Sampreeth Jaladi, Surya A Bhat</td></tr>
+    <tr><th>Date</th><td>19-11-2026</td></tr>
+    <tr><th>Status</th><td>Final for demo and viva</td></tr>
+    <tr><th>Supersedes</th><td>SAD v1.0 (09-09-2025), kept unchanged in the repository root</td></tr>
+  </table>
+</section>
+
+<h2>Revision History</h2>
+<table>
+  <tr><th>Version</th><th>Date</th><th>Author</th><th>Change Summary</th></tr>
+  <tr><td>0.8</td><td>01-09-2025</td><td>Samarth A</td><td>Component and sequence diagrams added</td></tr>
+  <tr><td>1.0</td><td>09-09-2025</td><td>Sanjith Suresh Kumar</td><td>Initial architecture document</td></tr>
+  <tr><td>2.0</td><td>19-11-2026</td><td>Samarth A</td><td>Architecture and design as built: modular monolith with the v1.0 service boundaries, in-process event bus, in-house BPMN engine, SQLite; updated component and sequence diagrams, full API design, security architecture as implemented, Sprint 3–4 features. Changes from v1.0 in Appendix 5.4.</td></tr>
+</table>
+
+<h2>Approvals</h2>
+<table>
+  <tr><th>Role</th><th>Name</th><th>Signature / Date</th></tr>
+  <tr><td>Project Lead</td><td>Sanjith Suresh Kumar</td><td></td></tr>
+  <tr><td>DevOps Lead</td><td>Sampreeth Jaladi</td><td></td></tr>
+  <tr><td>QA Lead</td><td>Sakaray Vishal</td><td></td></tr>
+  <tr><td>Developer Lead</td><td>Samarth A</td><td>19-11-2026</td></tr>
+</table>
+
+<h2 class="page-break">1. Introduction</h2>
+<h3>1.1 Purpose</h3>
+<p>This document specifies the architecture and design of the Insurance Workflow Automation System (IWAS) as built at the end of Sprint 4.</p>
+<h3>1.2 Scope</h3>
+<p>Covers all user services: quote generation, underwriting and KYC, policy issuance and lifecycle (renewal, endorsement, cancellation, reinstatement), payments and documents, claims processing with fraud detection, BPMN workflow orchestration, notifications, administration, reporting and audit.</p>
+<h3>1.3 Audience</h3>
+<p>Developers, QA engineers, security auditors, instructors and maintenance teams.</p>
+<h3>1.4 Definitions</h3>
+<p>IWAS, BPMN, KYC, RBAC, ADR (architecture decision record), PCI-DSS, TLS, SLA, CI/CD, JWT, TOTP, PII, STRIDE.</p>
+
+<h2>2. Document Overview</h2>
+<h3>2.1 How to Use This Document</h3>
+<p>Section 3 describes the architecture (components, pattern, technology, risks, security). Section 4 describes the design (sequence diagrams, API, error handling, UX). Appendix 5.4 lists what changed from v1.0 and why.</p>
+<h3>2.2 Related Documents</h3>
+<p>SRS v2.0, Test Plan (STP) v2.0, RTM (<code>docs/TRACEABILITY.md</code>), <code>docs/DEVIATIONS.md</code>, <code>README.md</code>.</p>
+
+<h2>3. Architecture</h2>
+<h3>3.1 Goals &amp; Constraints</h3>
+<p><b>Goals:</b> secure, reliable (99.9 % availability target), testable, and structured so that each service can later be deployed independently; scalable to 1M+ policies through horizontal scaling once split into services.</p>
+<p><b>Constraints:</b> IRDAI and GDPR compliance, PCI-DSS for payments (no card data in IWAS), BPMN 2.0 workflows, and a student team of five that must run, test and demo the whole system on laptops and in CI.</p>
+<h3>3.2 Stakeholders &amp; Concerns</h3>
+<table>
+  <tr><th>Stakeholder</th><th>Concerns</th><th>How the architecture addresses them</th></tr>
+  <tr><td>Customers</td><td>Security, availability, easy claims</td><td>Encryption, MFA for staff, guided UI, notifications at every step</td></tr>
+  <tr><td>Insurer operations</td><td>Maintainability, SLA tracking</td><td>Module per bounded context, configurable BPMN, SLA dashboard</td></tr>
+  <tr><td>Regulators</td><td>Compliance, audit trails</td><td>Hash-chained append-only audit log, PII masking, signed documents</td></tr>
+  <tr><td>Developers</td><td>Modularity, testability, CI/CD</td><td>Service interfaces, in-memory test databases, 170 automated tests, coverage gate in CI</td></tr>
+</table>
+<h3>3.3 Component (UML) Diagram</h3>
+<!--DIAGRAM:components-->
+<h3>3.4 Component Descriptions</h3>
+<table>
+  <tr><th>Component</th><th>Responsibility</th><th>Implementation</th></tr>
+  <tr><td>Web UI</td><td>Customer, agent, underwriter, adjuster and admin screens</td><td><code>public/</code>: plain JavaScript single-page app, EN/HI, WCAG 2.1 AA</td></tr>
+  <tr><td>API gateway layer</td><td>Routing, JWT authentication, RBAC, rate limiting, trace ids, security headers</td><td><code>src/app.js</code>, <code>src/security/middleware.js</code>, <code>express-rate-limit</code></td></tr>
+  <tr><td>Quote Service</td><td>Premium calculation and quotes</td><td><code>quotes.js</code> (local rating engine)</td></tr>
+  <tr><td>Underwriting Service</td><td>Risk scoring rule engine, manual review queue</td><td><code>underwriting.js</code> (rules in code; Drools stand-in)</td></tr>
+  <tr><td>Customers &amp; KYC</td><td>Onboarding, KYC adapter with circuit breaker, manual KYC, emergency contacts</td><td><code>customers.js</code></td></tr>
+  <tr><td>Policy Service</td><td>Issuance, renewal and reminders, endorsement, cancellation, reinstatement</td><td><code>policies.js</code></td></tr>
+  <tr><td>Payment Service</td><td>Premium charges (one at a time per item), refunds, payouts, GST invoices</td><td><code>payments.js</code> (gateway adapter)</td></tr>
+  <tr><td>Document Service</td><td>Signed PDFs (Ed25519), claim evidence, verification</td><td><code>documents.js</code>, <code>pdf.js</code></td></tr>
+  <tr><td>Claims Service</td><td>Registration, fraud rules, settlement, workflow integration</td><td><code>claims.js</code>, <code>fraud.js</code>, <code>settlement.js</code></td></tr>
+  <tr><td>Workflow Engine</td><td>BPMN 2.0 parsing, validation, versioned deployment, task routing</td><td><code>src/workflow/</code> (reads Camunda <code>candidateGroups</code>)</td></tr>
+  <tr><td>Notification Service</td><td>In-app, email and SMS with retry</td><td><code>notifications.js</code> (provider adapters)</td></tr>
+  <tr><td>Admin &amp; Reports</td><td>Dashboards, CSV/PDF reports, settings, jobs</td><td><code>admin.js</code></td></tr>
+  <tr><td>Users &amp; Auth</td><td>Registration, login with MFA, lockout, logout revocation, user management</td><td><code>users.js</code>, <code>security/auth.js</code></td></tr>
+  <tr><td>Audit log</td><td>Append-only, hash-chained record of every action</td><td><code>security/audit.js</code> + DB triggers</td></tr>
+  <tr><td>Data store</td><td>Transactional data, one table group per bounded context</td><td>SQLite via <code>node:sqlite</code> (<code>core/db.js</code>)</td></tr>
+  <tr><td>Event bus</td><td>Asynchronous events between modules</td><td><code>core/events.js</code> (Kafka stand-in, same topics)</td></tr>
+</table>
+<h3>3.5 Chosen Architecture Pattern and Rationale</h3>
+<p><b>Modular monolith + event-driven communication + BPMN orchestration.</b></p>
+<ul>
+  <li>Each SAD v1.0 service is a module with its own router, service functions and tables. Modules call each other only through <code>ctx.services</code> interfaces and react to events, so the boundaries match the planned microservices.</li>
+  <li>The BPMN engine externalises claim approval rules: admins deploy a new workflow version without redeploying code.</li>
+  <li><b>ADR-1 (v2.0):</b> microservices on Kubernetes with Kafka (v1.0 choice) was replaced by a modular monolith, because a five-person student team must run, debug and test the whole system on laptops and in CI with one command. Fault isolation is provided in-process (circuit breakers, notification failures isolated from claims). <i>Consequence:</i> one process; the payment lock and event bus are in-memory, so multiple instances would need a database lock and a real broker.</li>
+  <li><b>ADR-2:</b> store user text as written and escape it on output (no input stripping), so data is never silently altered.</li>
+  <li><b>ADR-3:</b> card data never reaches IWAS; the client sends a gateway token (PCI-DSS scope reduction).</li>
+</ul>
+<h3>3.6 Technology Stack &amp; Data Stores</h3>
+<table>
+  <tr><th>Layer</th><th>Technology (as built)</th><th>v1.0 plan</th></tr>
+  <tr><td>Frontend</td><td>HTML, CSS, plain JavaScript (no framework)</td><td>React 18, TypeScript, Redux</td></tr>
+  <tr><td>Backend</td><td>Node.js 22, Express 4</td><td>Java 17, Spring Boot 3, Node.js</td></tr>
+  <tr><td>Workflow</td><td>In-house BPMN 2.0 subset engine</td><td>Camunda</td></tr>
+  <tr><td>Database</td><td>SQLite (<code>node:sqlite</code>)</td><td>PostgreSQL 15, Redis 7</td></tr>
+  <tr><td>Messaging</td><td>In-process event bus</td><td>Apache Kafka</td></tr>
+  <tr><td>Storage</td><td>Document table behind a storage API</td><td>S3-compatible store</td></tr>
+  <tr><td>Infrastructure / CI</td><td>Docker image; GitHub Actions: tests, c8 coverage gate, CodeQL, gitleaks, npm audit, Trivy, container health check</td><td>Docker, Kubernetes (EKS), Terraform, GitHub Actions</td></tr>
+  <tr><td>Monitoring</td><td>Structured JSON logs with trace ids and PII redaction; health endpoint; SLA dashboard</td><td>Prometheus, Grafana, ELK</td></tr>
+</table>
+<h3>3.7 Risks &amp; Mitigations</h3>
+<table>
+  <tr><th>Risk</th><th>Mitigation (as built)</th></tr>
+  <tr><td>Workflow engine failure halts claims</td><td>Workflow state persisted in the database; versioned definitions; validation before deployment</td></tr>
+  <tr><td>Third-party KYC downtime</td><td>Circuit breaker + retry; manual KYC queue resolved by underwriters</td></tr>
+  <tr><td>Data breach of PII</td><td>AES-256-GCM at rest, TLS in transit, RBAC, PII masking, audit log</td></tr>
+  <tr><td>Payment gateway failure or double submission</td><td>Retry on transient errors; one payment at a time per application or policy; failed payments recorded</td></tr>
+  <tr><td>Notification failure blocking a claim or crashing the server</td><td>Fire-and-forget notifications with error isolation; failed channels recorded</td></tr>
+  <tr><td>Single process (modular monolith)</td><td>Stateless HTTP layer, Docker health check; split into services along module boundaries if needed</td></tr>
+</table>
+<h3>3.8 Traceability to Requirements</h3>
+<table>
+  <tr><th>Requirement group</th><th>Components</th></tr>
+  <tr><td>F-001 Quote, F-002 Risk scoring, F-003 KYC</td><td>Quote Service, Underwriting, Customers &amp; KYC</td></tr>
+  <tr><td>F-010..016 Policy lifecycle, invoices</td><td>Policy Service, Payment Service, Document Service</td></tr>
+  <tr><td>F-020..025 Claims</td><td>Claims Service, Workflow Engine, Notification Service, Admin &amp; Reports</td></tr>
+  <tr><td>F-030..034 Workflow admin, RBAC, dashboards, reports, audit</td><td>Workflow Engine, API gateway layer, Admin &amp; Reports, Audit log</td></tr>
+  <tr><td>NF-001..005, SR-001..006</td><td>Gateway (TLS, rate limits, headers), security modules, Web UI</td></tr>
+</table>
+<h3>3.9 Security Architecture</h3>
+<p><b>Threat model (STRIDE), as implemented:</b></p>
+<table>
+  <tr><th>Threat</th><th>Mitigation</th><th>Status</th></tr>
+  <tr><td>Spoofing</td><td>JWT with server-side revocation; TOTP MFA for admin and underwriter with replay protection; account lockout; constant-cost login</td><td>Implemented (mTLS not needed in one process)</td></tr>
+  <tr><td>Tampering</td><td>Ed25519-signed documents; append-only, hash-chained audit log; DB triggers block updates/deletes</td><td>Implemented</td></tr>
+  <tr><td>Repudiation</td><td>Every action audited with actor and trace id; signed documents</td><td>Implemented</td></tr>
+  <tr><td>Information disclosure</td><td>AES-256-GCM for PII at rest; TLS 1.2+; PII masking in API and logs; strict CSP, nosniff, no HTML rendering of user text</td><td>Implemented</td></tr>
+  <tr><td>Denial of service</td><td>Per-IP rate limits (stricter on login and public routes); body size limits</td><td>Implemented (WAF and autoscaling need a cloud deployment)</td></tr>
+  <tr><td>Elevation of privilege</td><td>Deny-by-default RBAC on every route; ownership checks per customer/agent; workflow tasks restricted to candidate groups</td><td>Implemented (secrets from environment instead of Vault)</td></tr>
+</table>
+
+<h2 class="page-break">4. Design</h2>
+<h3>4.1 Design Overview</h3>
+<p>Modules with clear bounded contexts; each owns its tables. Synchronous calls go through service interfaces (<code>ctx.services.*</code>); state changes are published on the event bus (<code>workflow.task.created</code>, <code>workflow.completed</code>, <code>customer.kyc_updated</code>, <code>policy.issued</code>, <code>policy.cancelled</code>, <code>policy.reinstated</code>, <code>claim.status_changed</code>). Calls to vendors use retry with exponential backoff and circuit breakers.</p>
+<h3>4.2 UML Sequence Diagrams</h3>
+<h4>4.2.1 Policy Purchase Flow</h4>
+<!--DIAGRAM:seq-policy-->
+<h4>4.2.2 Claim Processing Flow</h4>
+<!--DIAGRAM:seq-claim-->
+<p>The claim workflow (BPMN <code>claim-approval</code>): fraud investigation if the claim is flagged → adjuster review → senior approval by an admin above INR 1,00,000 → approved or rejected. Settlement then pays out and issues a signed settlement letter.</p>
+
+<h3 class="page-break">4.3 API Design</h3>
+<p>Base path <code>/api/v1</code>. JSON in and out. All endpoints except <code>/auth/*</code>, <code>/quote</code> and <code>/health</code> need <code>Authorization: Bearer &lt;JWT&gt;</code>.</p>
+<h4>4.3.1 Quote API</h4>
+<pre>POST /api/v1/quote
+Request:  { "age": 30, "income": 800000, "coverageType": "health", "term": 1, "sumInsured": 500000 }
+Response: 201 { "quoteId": "Q1A2B3C4D5E", "premium": 10620, "validUntil": "2026-12-19",
+                "breakdown": { "basePremium": 9000, "ageLoading": 0, "termDiscount": 0, "gst": 1620, "total": 10620 } }
+Errors:   400 INVALID_INPUT, 429 RATE_LIMITED, 503 SERVICE_UNAVAILABLE (actuarial engine)</pre>
+<h4>4.3.2 Claim API</h4>
+<pre>POST /api/v1/claims        (alias: /api/v1/claim, as in SAD v1.0)
+Request:  { "policyId": "P…", "claimType": "hospitalization", "amount": 50000, "incidentDate": "2026-11-10",
+            "description": "…", "documents": [{ "filename": "bill.pdf", "mime": "application/pdf", "contentBase64": "…" }] }
+Response: 201 { "claimId": "C…", "status": "UNDER_REVIEW", "eta": "5 days", … }
+Errors:   400 bad documents, 401, 403 not your policy, 404 policy not found, 413 file over 10 MB, 422 INVALID_CLAIM</pre>
+<h4>4.3.3 Endpoint Catalogue</h4>
+<table>
+  <tr><th>Resource</th><th>Endpoints</th><th>Roles</th></tr>
+  <tr><td>Auth</td><td><code>POST /auth/register</code>, <code>/auth/login</code> (+OTP), <code>/auth/logout</code>; <code>GET /me</code></td><td>Public / any</td></tr>
+  <tr><td>Customers</td><td><code>POST /customers</code>, <code>/customers/bulk</code>; <code>GET /customers</code>, <code>/customers/:id</code>; <code>PATCH /customers/:id</code>, <code>/:id/emergency-contact</code>; <code>POST /:id/kyc</code>, <code>/:id/kyc/manual</code></td><td>Customer, agent; underwriter for manual KYC</td></tr>
+  <tr><td>Quotes &amp; applications</td><td><code>POST/GET /quote</code>, <code>GET /quote/:id</code>; <code>POST/GET /applications</code>, <code>GET /applications/:id</code>, <code>POST /applications/:id/decision</code></td><td>Customer, agent; underwriter decides</td></tr>
+  <tr><td>Payments</td><td><code>POST /payments</code> (pay premium → policy); <code>GET /payments</code></td><td>Customer, agent; admin/underwriter read</td></tr>
+  <tr><td>Policies</td><td><code>GET /policies</code>, <code>/:id</code>, <code>/:id/renewal-quote</code>, <code>/:id/cancellation-quote</code>; <code>POST /:id/renew</code>, <code>/:id/endorse</code>, <code>/:id/cancel</code>, <code>/:id/reinstate</code></td><td>Owner (customer, agent); admin endorse/cancel</td></tr>
+  <tr><td>Claims</td><td><code>POST/GET /claims</code>, <code>GET /claims/:id</code>, <code>POST /:id/documents</code>, <code>/:id/decision</code>, <code>/:id/settle</code></td><td>Customer, agent file; adjuster/admin decide; adjuster settles</td></tr>
+  <tr><td>Documents</td><td><code>GET /documents/public-key</code>, <code>/:id</code>, <code>/:id/verify</code></td><td>Owner, owner's agent, staff</td></tr>
+  <tr><td>Workflow</td><td><code>GET /workflow/tasks</code>, <code>POST /workflow/tasks/:id/complete</code>, <code>GET /workflow/instances/:id</code>; admin: <code>GET/POST /admin/workflows</code>, <code>POST /admin/workflows/validate</code>, <code>GET /admin/workflows/:key/latest</code></td><td>Staff; admin deploys</td></tr>
+  <tr><td>Admin</td><td><code>GET /admin/dashboard</code>, <code>/admin/reports/:type</code>, <code>/admin/audit</code>, <code>/admin/audit/verify</code>, <code>/admin/settings</code>; <code>PUT /admin/settings/risk-threshold</code>; <code>POST /admin/jobs/renewal-reminders</code>; <code>/admin/users</code></td><td>Admin (dashboard: staff; claims report: adjuster)</td></tr>
+  <tr><td>Notifications</td><td><code>GET /notifications</code>, <code>POST /notifications/:id/read</code></td><td>Any signed-in user</td></tr>
+</table>
+<h3>4.4 Error Handling, Logging &amp; Monitoring</h3>
+<ul>
+  <li>Standardised error envelope on every error: <code>{ code, message, traceId }</code> (+ <code>details</code> where useful, e.g. the amount for <code>402 PAYMENT_REQUIRED</code>).</li>
+  <li>HTTP status map: 400 invalid input, 401 unauthenticated / MFA required, 402 payment failed or required, 403 forbidden, 404 not found, 409 state conflict (e.g. <code>PAYMENT_IN_PROGRESS</code>), 413 too large, 422 business rule, 429 rate limited or locked, 503 vendor unavailable.</li>
+  <li>Structured JSON logs; PII redacted from every line; trace id per request (client ids validated to prevent log injection).</li>
+  <li>Health endpoint <code>/api/v1/health</code> used by the Docker <code>HEALTHCHECK</code> and CI; dashboard shows SLA breaches (tasks older than 48 h), claim backlog, failed payments.</li>
+</ul>
+<h3>4.5 UX Design</h3>
+<p>Role-based single-page UI; WCAG 2.1 AA (verified on every screen with axe-core; contrast in both themes); English and Hindi navigation; guided claim filing in three steps with a progress tracker; confirmation dialogs that state amounts before any payment or cancellation.</p>
+<h3>4.6 Open Issues &amp; Next Steps</h3>
+<ul>
+  <li>Split modules into services with a real broker if load requires it (boundaries already in place).</li>
+  <li>ML-based fraud scoring on top of the 8 rules; blockchain audit trail and native mobile app remain out of scope.</li>
+  <li>Production deployment: uptime monitoring, Prometheus/Grafana, WAF, secrets vault, OWASP ZAP scan.</li>
+  <li>Embed a Unicode font for Devanagari text in generated PDFs.</li>
+</ul>
+
+<h2>5. Appendices</h2>
+<h3>5.1 Glossary</h3>
+<p>IWAS, BPMN, KYC, RBAC, ADR, PCI-DSS, TLS, SLA, CI/CD, JWT, TOTP, PII, STRIDE, GST.</p>
+<h3>5.2 References</h3>
+<p>IEEE 42010, IEEE 1016, OWASP ASVS, NIST SP 800-160, IRDAI guidelines, BPMN 2.0 (OMG).</p>
+<h3>5.3 Tools</h3>
+<p>GitHub, GitHub Actions, Node.js test runner, c8, axe-core, Docker; diagrams generated by <code>scripts/build-docs.js</code>.</p>
+<h3>5.4 Changes from SAD v1.0</h3>
+<table>
+  <tr><th>Section</th><th>v1.0</th><th>v2.0 (as built)</th></tr>
+  <tr><td>3.5 Pattern</td><td>Microservices + Kafka + Camunda</td><td>Modular monolith with the same service boundaries, in-process event bus, in-house BPMN engine (ADR-1)</td></tr>
+  <tr><td>3.6 Stack</td><td>Spring Boot, React, PostgreSQL, Redis, S3, Kubernetes, ELK</td><td>Node.js/Express, plain JS UI, SQLite, document table, Docker, structured logs</td></tr>
+  <tr><td>3.9 Security</td><td>Includes mTLS, WAF, autoscaling, Vault</td><td>All other controls implemented; these four need a cloud deployment</td></tr>
+  <tr><td>4.2.2 Claim flow</td><td>Adjuster review → settlement</td><td>Adds fraud investigation and senior approval (multi-level, SRS F-021)</td></tr>
+  <tr><td>4.3 API</td><td>Quote and claim APIs</td><td>Full catalogue; claim uploads carry file content; claim status starts UNDER_REVIEW</td></tr>
+  <tr><td>New features</td><td>–</td><td>Cancellation, cancellation quote, reinstatement, claims export, emergency contacts</td></tr>
+</table>
+
+</body>
+</html>
