@@ -1,0 +1,9 @@
+# Normalise line endings across platforms
+* text=auto
+
+# Treat these as binary (never diff or convert line endings)
+*.pdf binary
+*.db binary
+
+# Keep the lockfile LF
+package-lock.json text eol=lf
