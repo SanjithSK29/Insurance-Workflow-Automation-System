@@ -73,6 +73,49 @@
     REJECTED: 'bad', KYC_FAILED: 'bad', FAILED: 'bad', EXPIRED: 'bad' };
   const badge = (s) => h('span', { class: 'badge ' + (STATUS_TONE[s] || '') }, String(s || '–').replace(/_/g, ' '));
 
+  // ---------- icons (inline SVG, feather-style) ----------
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const ICONS = {
+    user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    shieldcheck: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
+    bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+    calc: '<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="14" x2="8" y2="18"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="8" y1="10" x2="16" y2="10"/>',
+    buoy: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>',
+    clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>',
+    usercheck: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/>',
+    inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    dollar: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+    branch: '<line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+    chart: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+    settings: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+    alert: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    checkcircle: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    banknote: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+    sun: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+    moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  };
+  const NAV_ICON = { profile: 'user', quote: 'calc', applications: 'file', policies: 'shield', claims: 'buoy', notifications: 'bell', customers: 'users', review: 'clipboard', kyc: 'usercheck', tasks: 'inbox', settle: 'dollar', dashboard: 'grid', workflows: 'branch', users: 'users', audit: 'shieldcheck', reports: 'chart', settings: 'settings' };
+
+  function icon(name) {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = ICONS[name] || '';
+    return svg;
+  }
+  const logo = () => h('span', { class: 'logo', 'aria-hidden': 'true' }, icon('shield'));
+  const avatar = (name) => h('span', { class: 'avatar', 'aria-hidden': 'true' },
+    String(name || '').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase());
+
   function toast(msg, err = false) {
     const el = h('div', { class: 'toast' + (err ? ' err' : '') }, msg);
     document.getElementById('toast').append(el);
@@ -161,14 +204,24 @@
     field('Password (min 8 characters)', 'password', { type: 'password', required: true, minlength: 8 }),
     h('button', { type: 'submit' }, 'Register'));
 
-    $main.replaceChildren(h('div', { class: 'login' }, card('Sign in to IWAS', form,
-      h('div', { class: 'actions' }, h('button', { class: 'ghost', type: 'button', onclick: () => reg.classList.toggle('hidden') }, 'New customer? Register')),
-      reg,
-      h('h3', {}, 'Demo accounts'),
-      h('p', { class: 'muted' }, 'Password: Passw0rd! — MFA codes: run "npm run otp -- <secret>" with the secret printed at server start.'),
-      h('div', { class: 'demo' }, demo.map(([label, email]) => h('button', { class: 'ghost', type: 'button', onclick: () => {
-        form.querySelector('[name=email]').value = email; form.querySelector('[name=password]').value = 'Passw0rd!';
-      } }, `${label} – ${email}`))))));
+    const demoBtn = demo.map(([label, email]) => h('button', { class: 'ghost', type: 'button', onclick: () => {
+      form.querySelector('[name=email]').value = email; form.querySelector('[name=password]').value = 'Passw0rd!';
+    } }, h('b', {}, label), h('span', {}, email)));
+
+    $main.replaceChildren(h('div', { class: 'login-wrap' },
+      h('div', { class: 'login-hero' },
+        logo(), h('h1', {}, 'Insurance Workflow Automation'),
+        h('p', {}, 'A secure, end-to-end platform for quotes, underwriting, policies and claims — built for trust and speed.'),
+        h('div', { class: 'hero-points' },
+          h('div', {}, icon('shield'), h('span', {}, 'Quotes, underwriting, policies and claims in one place')),
+          h('div', {}, icon('shieldcheck'), h('span', {}, 'Role-based dashboards with an immutable audit trail')),
+          h('div', {}, icon('bell'), h('span', {}, 'BPMN-driven approvals and real-time notifications')))),
+      h('div', { class: 'login-card' }, card('Sign in', form,
+        h('div', { class: 'actions' }, h('button', { class: 'ghost', type: 'button', onclick: () => reg.classList.toggle('hidden') }, 'New customer? Register')),
+        reg,
+        h('h3', {}, 'Demo accounts'),
+        h('p', { class: 'muted' }, 'Password: Passw0rd! — MFA codes: run "npm run otp -- <secret>" with the secret printed at server start.'),
+        h('div', { class: 'demo' }, demoBtn)))));
   }
 
   // ---------- shared views ----------
@@ -184,14 +237,16 @@
 
   async function dashboardView() {
     const d = await api('GET', '/admin/dashboard');
-    const stat = (v, l) => h('div', { class: 'stat' }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l));
+    const stat = (v, l, ic) => h('div', { class: 'stat' },
+      h('div', { class: 'top' }, h('span', { class: 'ic' }, icon(ic || 'grid')), h('span', { class: 'v' }, v)),
+      h('div', { class: 'l' }, l));
     const kv = (obj) => h('dl', { class: 'kv' }, Object.entries(obj).flatMap(([k, v]) => [h('dt', {}, k.replace(/_/g, ' ')), h('dd', {}, v)]));
     page('Dashboard',
       h('div', { class: 'stats' },
-        stat(d.policies.active, 'Active policies'), stat(d.claims.backlog, 'Claim backlog'),
-        stat(d.sla.openTasks, 'Open workflow tasks'), stat(d.sla.breachedTasks, `SLA breaches (>${d.sla.targetHours}h)`),
-        stat(d.applications.pendingManualReview, 'Applications in review'), stat(d.claims.fraudFlagged, 'Fraud-flagged claims'),
-        stat(inr(d.finance.premiumCollected), 'Premium collected'), stat(inr(d.claims.totalPaidOut), 'Claims paid out')),
+        stat(d.policies.active, 'Active policies', 'shield'), stat(d.claims.backlog, 'Claim backlog', 'inbox'),
+        stat(d.sla.openTasks, 'Open workflow tasks', 'grid'), stat(d.sla.breachedTasks, `SLA breaches (>${d.sla.targetHours}h)`, 'alert'),
+        stat(d.applications.pendingManualReview, 'Applications in review', 'clipboard'), stat(d.claims.fraudFlagged, 'Fraud-flagged claims', 'shieldcheck'),
+        stat(inr(d.finance.premiumCollected), 'Premium collected', 'dollar'), stat(inr(d.claims.totalPaidOut), 'Claims paid out', 'banknote')),
       h('div', { class: 'grid' },
         card('Policies by status', kv(d.policies.byStatus)),
         card('Claims by status', kv(d.claims.byStatus)),
@@ -563,9 +618,9 @@
       return loginView();
     }
     try { state.me = await api('GET', '/me'); } catch { return logout(); }
-    document.getElementById('whoami').textContent = `${state.me.name} · ${state.me.role.toLowerCase()}`;
+    document.getElementById('whoami').replaceChildren(avatar(state.me.name), h('span', {}, `${state.me.name} · ${state.me.role.toLowerCase()}`));
     logoutBtn.hidden = false;
-    nav.replaceChildren(...VIEWS[state.me.role].map(([id, label]) => h('button', { 'data-view': id, onclick: () => go(id) }, t(label))));
+    nav.replaceChildren(...VIEWS[state.me.role].map(([id, label]) => h('button', { 'data-view': id, onclick: () => go(id) }, icon(NAV_ICON[id] || 'grid'), h('span', {}, t(label)))));
     go(location.hash.slice(1));
   }
 
@@ -577,5 +632,25 @@
   const langSel = document.getElementById('lang');
   langSel.value = lang;
   langSel.addEventListener('change', () => { lang = langSel.value; safeSet('iwas.lang', lang); document.documentElement.lang = lang; render(); });
+
+  // ---------- theme ----------
+  const themeBtn = document.getElementById('theme');
+  const THEME_KEY = 'iwas.theme';
+  const sysDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    themeBtn.replaceChildren(icon(theme === 'dark' ? 'sun' : 'moon'));
+    themeBtn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    themeBtn.title = theme === 'dark' ? 'Light mode' : 'Dark mode';
+  }
+  (function initTheme() {
+    const saved = safeGet(THEME_KEY);
+    applyTheme(saved === 'light' || saved === 'dark' ? saved : (sysDark() ? 'dark' : 'light'));
+  })();
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    safeSet(THEME_KEY, next); applyTheme(next);
+  });
+
   render();
 })();
