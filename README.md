@@ -151,7 +151,10 @@ The `security` job in the CI pipeline runs `npm audit` (fails on high or critica
 
 ```text
 .
+├── .editorconfig
+├── .gitattributes
 ├── .github/workflows/ci-cd-pipeline.yaml   PDF checks + npm test + server smoke test + Docker build
+├── CHANGELOG.md
 ├── Dockerfile
 ├── docs/
 │   ├── TRACEABILITY.md                     RTM: requirement → module → test → status
@@ -159,6 +162,8 @@ The `security` job in the CI pipeline runs `npm audit` (fails on high or critica
 │   ├── TEST_CASES.md                       Test Case Document (updated after the sprints)
 │   ├── DEVIATIONS.md                       Claims and testing deviations from the SRS, SAD and STP
 │   ├── WORK_SPLIT.md                       Team responsibilities
+│   ├── CONTRIBUTING.md                     How to build, test and propose changes
+│   ├── DEMO.md                             Scripted end-to-end demo walkthrough
 │   └── reports/                            Part-3 test reports, test summary, defect log
 ├── perf/quote-load.js                      k6 load script (TC-Perf-01 against a deployed env)
 ├── public/                                 Web UI (index.html, app.js, styles.css)
