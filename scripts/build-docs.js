@@ -13,7 +13,12 @@ const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'docs', 'ieee', 'src');
 const OUT = path.join(ROOT, 'docs', 'ieee');
 
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const esc = (s) => String(s)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 // ---------------------------------------------------------------- use-case diagrams
 function stickFigure(x, y, label) {
