@@ -3,8 +3,8 @@
 | | |
 | --- | --- |
 | Project | Insurance Workflow Automation System (IWAS) |
-| Document | Test Case Document, version 2.4 (updates the test cases in STP v1.0 §3 and §13) |
-| History | 2.0: 86 cases after the sprints (PR #9). 2.1: 114 cases, adds contract, security, defect-regression, settlement-letter and tracking cases (PR #10). 2.2: 122 cases, adds numeric-input cases for DEF-04..07 (PR #11). 2.3: 154 cases, adds the Developer Lead's cases for policies, payments, documents and the web UI, DEF-08..14 (branch `samarth-dev-hardening`). 2.4: 170 cases, adds the Sprint 4 cases (Surya) and TC-Sec-XSS-02, after the Sprint 4 fixes (DEF-15/16). |
+| Document | Test Case Document, version 2.5 (updates the test cases in STP v1.0 §3 and §13) |
+| History | 2.0: 86 cases after the sprints (PR #9). 2.1: 114 cases, adds contract, security, defect-regression, settlement-letter and tracking cases (PR #10). 2.2: 122 cases, adds numeric-input cases for DEF-04..07 (PR #11). 2.3: 154 cases, adds the Developer Lead's cases for policies, payments, documents and the web UI, DEF-08..14 (branch `samarth-dev-hardening`). 2.4: 170 cases, adds the Sprint 4 cases (Surya) and TC-Sec-XSS-02, after the Sprint 4 fixes (DEF-15/16). 2.5: 171 cases, adds TC-UX-06 (DEF-17). |
 | Prepared by | Sakaray Vishal (QA Lead), PES1UG24AM241; sections 3.2 and 3.16 extended by Samarth A (Developer Lead) |
 | Reviewed by | Samarth A (Developer Lead) |
 | Date | 17-11-2026 |
@@ -26,12 +26,12 @@ STP v1.0 (31-08-2025) listed 9 features to test and named 11 example test cases 
 | 8 | A review of the other modules found the DEF-03 coercion in quotes, customer income, endorsements and the admin risk threshold (DEF-04..07). | Section 3.15 (TC-Num, TC-Quote-06/07, TC-KYC-03/04, TC-Endorse-02, TC-Admin-02). |
 | 9 | The Developer Lead tested his own modules (policies, payments, documents, PDF, web UI), whose branch coverage was 76–82 %, and found DEF-08..14: double charges, unpaid endorsements, wrong refunds after renewal, loose endorsement text, accented names in PDFs, colour contrast and logout not revoking the token. The WCAG audit (TC-UX-01), planned for UAT, was automated with axe-core. | 32 test cases: section 3.2 (TC-Pay-03..08, TC-Endorse-03..06, TC-Cancel-03..05, TC-Renew-03/04, TC-Policy-03/04, TC-Doc-01/02, TC-PDF-03..05) and section 3.16 (TC-UX-01..05). |
 
-After all changes: **170 test cases in 24 files** (122 after the QA cycle, then 32 from the Developer Lead, then 5 login-hardening follow-ups by Sampreeth Jaladi, then 10 Sprint 4 cases by Surya A Bhat and TC-Sec-XSS-02). Branch coverage of the QA Lead's modules: claims 96.55 %, fraud 100 %, settlement 100 %, notifications 100 %.
+After all changes: **171 test cases in 24 files** (122 after the QA cycle, then 32 from the Developer Lead, then 5 login-hardening follow-ups by Sampreeth Jaladi, then 10 Sprint 4 cases by Surya A Bhat, TC-Sec-XSS-02 and TC-UX-06). Branch coverage of the QA Lead's modules: claims 96.55 %, fraud 100 %, settlement 100 %, notifications 100 %.
 
 ## 2. Conventions
 
 - **Level:** U = unit (function called directly), I = integration (module through the HTTP API with a real database), S = system (end-to-end business flow across several modules).
-- **Status** is the result of the run on 17-11-2026: P = passed. All 170 automated cases passed on 19-11-2026, after the Sprint 4 fixes on branch `samarth-fix-main`.
+- **Status** is the result of the run on 17-11-2026: P = passed. All 171 automated cases passed on 19-11-2026 (final run, branch `samarth-final-deliverables`).
 - Every API test runs against an isolated in-memory database created by `test/helpers.js`, with one user per role (ADMIN, UNDERWRITER, ADJUSTER, AGENT, CUSTOMER) and synthetic customer data (STP §6 "Test Data").
 - Run everything with `npm test`; run with coverage with `npm run test:coverage`.
 
@@ -272,6 +272,7 @@ Every screen is rendered from the real app (seeded demo data) in jsdom and check
 | TC-UX-03 | NF-005 | S | Skip link, language switch label, live region, current-page marker | Present and correctly wired | P |
 | TC-UX-04 | NF-005 | U | Text and focus-ring contrast in light and dark themes | Text ≥ 4.5:1, focus ring ≥ 3:1 | P (failed before fix, DEF-13) |
 | TC-UX-05 | F-031, SR-002 | S | Log out in the UI, then reuse the copied token | Token revoked: 401 | P (failed before fix, DEF-14) |
+| TC-UX-06 | NF-005, F-022 | S | Every screen of every role | No "null", "undefined" or "[object …]" text; adjuster sees the fraud indicators | P (failed before fix, DEF-17) |
 | TC-Sec-XSS-02 | SR-006, F-020 | S | Claim description with `<img onerror>` and `<script>` shown on the adjuster's task screen | Text shown exactly as written; no element created, no script run | P |
 
 ### 3.17 Sprint 4 (owner: Surya A Bhat, new) — `test/policy-reinstatement.test.js`, `test/sprint4-security-fraud.test.js`

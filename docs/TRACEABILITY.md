@@ -2,8 +2,8 @@
 
 This matrix updates SRS §8 and STP §13 with the implementation and test results.
 Status: **P** = passed, **A** = automated check in CI, **M** = manual / environment-dependent verification.
-Last run (19-11-2026, after the Sprint 4 fixes on branch `samarth-fix-main`): `npm test` on Node.js 22.19.0 (Windows 11): **170 tests, 170 passed, 0 failed** (122 at the end of the QA cycle, 154 after the Developer Lead cycle). CI re-runs the suite on Node.js 22 for every push and pull request.
-Coverage (`npm run test:coverage`, c8 with `--all`): **96.46 % statements, 85.81 % branches, 95.10 % functions, 96.46 % lines** (QA cycle: 94.68 / 82.18 / 93.53 / 94.68); CI fails below 93 / 80 / 92 / 93. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md). Defects: [Defect Log](reports/DEFECT_LOG.md). Deviations: [DEVIATIONS.md](DEVIATIONS.md).
+Last run (19-11-2026, final, branch `samarth-final-deliverables`): `npm test` on Node.js 22.19.0 (Windows 11): **171 tests, 171 passed, 0 failed** (122 at the end of the QA cycle, 154 after the Developer Lead cycle, 170 after the Sprint 4 fixes). CI re-runs the suite on Node.js 22 for every push and pull request.
+Coverage (`npm run test:coverage`, c8 with `--all`): **96.46 % statements, 85.83 % branches, 95.10 % functions, 96.46 % lines** (QA cycle: 94.68 / 82.18 / 93.53 / 94.68); CI fails below 93 / 80 / 92 / 93. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md). Defects: [Defect Log](reports/DEFECT_LOG.md). Deviations: [DEVIATIONS.md](DEVIATIONS.md).
 
 ## Functional requirements
 
@@ -38,7 +38,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **96.46 % statements, 85.81
 | IWA-NF-002 | 99.9 % availability | Health endpoint, Docker `HEALTHCHECK`, stateless app (horizontally scalable), circuit breakers on vendors; notification failures cannot crash the process (DEF-01 fix) | CI container health check, TC-Notify-10 – 12 | A / M (needs production monitoring) |
 | IWA-NF-003 | AES-256 at rest, TLS 1.2+ in transit | `security/crypto.js` (AES-256-GCM), `server.js` (`minVersion: TLSv1.2`) | TC-Sec-01, TC-Sec-TLS-01 | P |
 | IWA-NF-004 | Audit retention 7 years, immutable | Append-only triggers + hash chain; no delete path in code | TC-Audit-01 | P (retention = ops policy, M) |
-| IWA-NF-005 | WCAG 2.1 AA | Labels, skip link, focus ring, `aria-live` toasts, keyboard-only flows; colour tokens meet 4.5:1 / 3:1 in both themes (DEF-13) | TC-UX-01..04: axe-core WCAG A/AA rules on every screen of every role, plus a contrast check; screen-reader walk-through at UAT | P (automated) / M (screen reader) |
+| IWA-NF-005 | WCAG 2.1 AA | Labels, skip link, focus ring, `aria-live` toasts, keyboard-only flows; colour tokens meet 4.5:1 / 3:1 in both themes (DEF-13) | TC-UX-01..04, TC-UX-06: axe-core WCAG A/AA rules on every screen of every role, a contrast check and a placeholder-text check (DEF-17); screen-reader walk-through at UAT | P (automated) / M (screen reader) |
 | IWA-SR-001 | TLS 1.2+ mandatory | HTTPS server option, HSTS header | TC-Sec-TLS-01 | P |
 | IWA-SR-002 | MFA for admin and underwriter | TOTP (RFC 6238) in `security/auth.js`, enforced in `users.js` | TC-Sec-MFA-01 | P |
 | IWA-SR-003 | PII masked in logs and UI | `security/pii.js`, `core/logger.js`, audit redaction | TC-Sec-PII-01, TC-Sec-Claim-03 | P |
@@ -77,7 +77,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **96.46 % statements, 85.81
 
 | Criterion (STP §5) | Result |
 | --- | --- |
-| 100 % of planned automated test cases executed | 170 / 170 executed, 170 passed |
-| 0 critical defects open | 0 open (16 found: 4 High, 8 Medium, 4 Low; all fixed and re-tested) |
+| 100 % of planned automated test cases executed | 171 / 171 executed, 171 passed |
+| 0 critical defects open | 0 open (17 found: 4 High, 9 Medium, 4 Low; all fixed and re-tested) |
 | All high-priority acceptance criteria met | All high-priority F- and SR- requirements are P |
 | Items that need a deployed environment | NF-002 uptime, k6 load test, OWASP ZAP scan, NF-005 screen-reader walk-through: planned for UAT (the automated WCAG checks now run in CI) |

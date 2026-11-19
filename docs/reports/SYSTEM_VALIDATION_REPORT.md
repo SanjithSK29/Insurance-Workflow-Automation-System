@@ -8,7 +8,18 @@
 | Validated against | SRS v1.0 (FR, NFR, security requirements), STP v1.0 §3, §5, §5.1 |
 | Build under test | Branch `vishal-input-validation` (= `main` at `b4c18dd` + PR #9 + PR #10 + PR #11, including all seven defect fixes) |
 | Executed on | 17-11-2026 |
-| Verdict | **Accepted for demo.** All high-priority functional and security requirements pass. Three non-functional checks need a deployed environment and remain open for UAT (section 6). |
+| Verdict | **Accepted for demo (re-validated 19-11-2026).** All 21 functional and 6 security requirements pass, including those added in Sprints 3–4; NF-005 is now validated automatically. Open for UAT: NF-002 uptime, the k6 load run, an OWASP ZAP scan and a screen-reader walk-through. |
+
+## 0. Re-validation (19-11-2026)
+
+Validated against **SRS v2.0** ([docs/ieee/SRS_v2.0.pdf](../ieee/SRS_v2.0.pdf)) on `main` at `aab6199` (PR #16) + branch `samarth-final-deliverables` (DEF-17 fix, TC-UX-06): 171 / 171 tests passed.
+
+| Requirement group | Requirements | Result |
+| --- | --- | --- |
+| Functional (IWA-F) | 21: F-001..003, F-010..016, F-020..025, F-030..034 | All pass end to end (F-014, F-015, F-016, F-025 added in Sprints 3–4) |
+| Security (IWA-SR) | 6: SR-001..006 | All pass (SR-006, user text never runs as markup, added in Sprint 4: TC-Sec-XSS-01/02) |
+| Non-functional (IWA-NF) | 5 | NF-001 (in-process p95), NF-003, NF-004 pass; **NF-005 now automated**: axe-core WCAG A/AA rules on every screen of all five roles, contrast in both themes, no placeholder text (TC-UX-01..06); NF-002 needs production monitoring |
+| End-to-end flows | Policy purchase; claim with multi-level approval and settlement | Also demonstrated on the running application in the Sprint 1 and Sprint 2 videos ([docs/videos](../videos/)) |
 
 ## 1. Purpose
 

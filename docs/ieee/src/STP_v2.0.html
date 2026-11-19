@@ -25,13 +25,13 @@
   <tr><th>Version</th><th>Date</th><th>Author</th><th>Change Summary</th></tr>
   <tr><td>1.0</td><td>31-08-2025</td><td>Sakaray Vishal</td><td>Initial test plan (Part-1)</td></tr>
   <tr><td>1.1</td><td>17-11-2026</td><td>Sakaray Vishal</td><td>Aligned with Sprints 1–2 and Part-3 testing: scope, tools, environment, schedule, deliverables, traceability, metrics</td></tr>
-  <tr><td>2.0</td><td>19-11-2026</td><td>Samarth A</td><td>Final plan: Sprint 3–4 features (F-014..016, F-025, SR-006), automated accessibility testing, Developer Lead and Sprint 4 test cycles, final results (170 / 170, 16 defects), IEEE template format</td></tr>
+  <tr><td>2.0</td><td>19-11-2026</td><td>Samarth A</td><td>Final plan: Sprint 3–4 features (F-014..016, F-025, SR-006), automated accessibility testing, Developer Lead and Sprint 4 test cycles, final results (171 / 171, 17 defects), IEEE template format</td></tr>
 </table>
 
 <h2 class="page-break">1. Introduction</h2>
 <p><b>Purpose:</b> defines the test plan for IWAS v1.0: objectives, scope, strategy, resources, schedule and responsibilities.</p>
 <p><b>Scope:</b> quote generation, underwriting and KYC, policy issuance, renewal, endorsement, cancellation and reinstatement, payments and invoices, claims, fraud detection, settlement, workflow orchestration, notifications, admin, RBAC, audit, security and the web UI. Core actuarial model internals and third-party vendor systems are excluded.</p>
-<p><b>References:</b> SRS v2.0, SAD v2.0, RTM (<code>docs/TRACEABILITY.md</code>), Test Case Document v2.4 (<code>docs/TEST_CASES.md</code>), <code>docs/DEVIATIONS.md</code>, IRDAI standards, PCI-DSS, WCAG 2.1.</p>
+<p><b>References:</b> SRS v2.0, SAD v2.0, RTM (<code>docs/TRACEABILITY.md</code>), Test Case Document v2.5 (<code>docs/TEST_CASES.md</code>), <code>docs/DEVIATIONS.md</code>, IRDAI standards, PCI-DSS, WCAG 2.1.</p>
 <p><b>Definitions:</b> IWAS, KYC, BPMN, RTM, SLA, CI/CD, UAT, c8 (Node.js coverage tool), axe-core (WCAG rule engine), p95 (95th percentile).</p>
 
 <h2>2. Test Items</h2>
@@ -64,7 +64,7 @@
   <tr><td>IWA-F-030..034</td><td>BPMN admin, RBAC, dashboards, reports, audit log</td><td>TC-Admin-01, TC-RBAC-01, TC-Dash-01, TC-Report-01, TC-Audit-01</td></tr>
   <tr><td>IWA-NF-001</td><td>Quote and claim-status APIs: p95 ≤ 2 s</td><td>TC-Perf-01 (CI), TC-Perf-02 (k6)</td></tr>
   <tr><td>IWA-NF-002..004</td><td>Availability, encryption, audit retention</td><td>CI health check, TC-Sec-01, TC-Audit-01</td></tr>
-  <tr><td>IWA-NF-005</td><td>WCAG 2.1 AA</td><td>TC-UX-01..04</td></tr>
+  <tr><td>IWA-NF-005</td><td>WCAG 2.1 AA</td><td>TC-UX-01..04, TC-UX-06</td></tr>
   <tr><td>IWA-SR-001..006</td><td>TLS, MFA, PII masking, rate limits, signed documents, XSS</td><td>TC-Sec-*, TC-UX-05, TC-Sec-XSS-01..02</td></tr>
 </table>
 
@@ -125,7 +125,7 @@
 <table>
   <tr><th>Deliverable</th><th>Location</th></tr>
   <tr><td>Test plan</td><td>This document (v2.0); v1.0 PDF in the repository root</td></tr>
-  <tr><td>Test cases</td><td><code>docs/TEST_CASES.md</code> v2.4: 170 automated + 6 manual/environment checks</td></tr>
+  <tr><td>Test cases</td><td><code>docs/TEST_CASES.md</code> v2.5: 171 automated + 6 manual/environment checks</td></tr>
   <tr><td>Test scripts</td><td><code>test/*.test.js</code> (24 files), <code>test/helpers.js</code>, <code>perf/quote-load.js</code></td></tr>
   <tr><td>Test execution logs</td><td><code>docs/reports/evidence/</code>, CI run logs</td></tr>
   <tr><td>Defect reports</td><td><code>docs/reports/DEFECT_LOG.md</code></td></tr>
@@ -172,12 +172,12 @@
 <h2>14. Test Metrics &amp; Reporting</h2>
 <table>
   <tr><th>Metric</th><th>Result (19-11-2026)</th></tr>
-  <tr><td>Test cases executed / passed</td><td>170 / 170 (100 %)</td></tr>
+  <tr><td>Test cases executed / passed</td><td>171 / 171 (100 %)</td></tr>
   <tr><td>Requirement coverage</td><td>21 / 21 functional, 6 / 6 security, 5 / 5 non-functional requirements with tests (NF-002 uptime needs production)</td></tr>
-  <tr><td>Defects found / fixed / open</td><td>16 / 16 / 0 (High 4, Medium 8, Low 4)</td></tr>
+  <tr><td>Defects found / fixed / open</td><td>17 / 17 / 0 (High 4, Medium 9, Low 4)</td></tr>
   <tr><td>Defect aging</td><td>All fixed on the day found</td></tr>
-  <tr><td>Code coverage</td><td>96.46 % statements, 85.81 % branches, 95.10 % functions, 96.46 % lines</td></tr>
-  <tr><td>Accessibility</td><td>0 WCAG A/AA violations on all screens of all five roles</td></tr>
+  <tr><td>Code coverage</td><td>96.46 % statements, 85.83 % branches, 95.10 % functions, 96.46 % lines</td></tr>
+  <tr><td>Accessibility</td><td>0 WCAG A/AA violations and no placeholder text on all screens of all five roles</td></tr>
 </table>
 <p><b>Reports:</b> every CI run (results, coverage summary, HTML coverage artifact); Unit Test, System Validation, Code Coverage, Branch Coverage and Test Summary reports in <code>docs/reports/</code>.</p>
 

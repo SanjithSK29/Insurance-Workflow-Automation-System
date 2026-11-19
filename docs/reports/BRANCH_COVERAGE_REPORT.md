@@ -8,7 +8,28 @@
 | Tool | c8 10.1.3 (V8 native branch coverage), `.c8rc.json`, `npm run test:coverage` |
 | Build under test | Branch `vishal-input-validation` (= `main` at `b4c18dd` + PR #9 + PR #10 + PR #11) |
 | Executed on | 17-11-2026, Node.js v25.2.0, Windows 11; repeated in CI on Node.js 22 |
-| Result | **82.18 % of branches covered (932 / 1134)**, up from 75.52 % (756 / 1001). CI fails below 80 %. |
+| Result | **Final run 19-11-2026: 85.83 % of branches covered (1103 / 1285)**, up from 82.18 % at the end of the QA cycle and 75.52 % at the baseline. CI fails below 80 %. |
+
+## 0. Final run (19-11-2026)
+
+`main` at `aab6199` (PR #16) + branch `samarth-final-deliverables` (DEF-17 fix, TC-UX-06); 171 tests. Overall branch coverage **85.83 % (1103 / 1285)**.
+
+Files with the lowest branch coverage (all other files are higher):
+
+| File | Branches covered | Percent |
+| --- | --- | --- |
+| `src/server.js` | 2 / 3 | 66.66 % |
+| `src/core/events.js` | 5 / 7 | 71.42 % |
+| `src/modules/users.js` | 51 / 71 | 71.83 % |
+| `src/workflow/bpmn.js` | 44 / 60 | 73.33 % |
+| `src/workflow/engine.js` | 40 / 54 | 74.07 % |
+| `src/modules/customers.js` | 86 / 116 | 74.13 % |
+| `src/seed.js` | 3 / 4 | 75.00 % |
+| `src/core/logger.js` | 7 / 9 | 77.77 % |
+| `src/modules/underwriting.js` | 71 / 91 | 78.02 % |
+| `src/core/errors.js` | 16 / 20 | 80.00 % |
+
+Change since the QA cycle: the Developer Lead's modules rose from 76–82 % to 92–95 % (`documents.js`, `payments.js`, `pdf.js`, `policies.js`); Sprint 4 code (reinstatement, cancellation quote, emergency contacts, claims export) is covered by its own tests.
 
 ## 1. What branch coverage measures here
 

@@ -170,7 +170,7 @@ svg.uml .dep { stroke: #475569; stroke-width: 1.4; }
 <p>REST/JSON over HTTPS (TLS 1.2 minimum when a certificate is configured, HSTS), JWT bearer tokens with server-side revocation, standard error envelope <code>{ code, message, traceId }</code>, retry with exponential backoff and circuit breakers towards vendors.</p>
 
 <h2 class="page-break">4. System Features (Detailed)</h2>
-<p>Priority: H = high, M = medium, L = low. Test case IDs refer to the Test Case Document (<code>docs/TEST_CASES.md</code>); all listed tests pass (170 / 170 on 19-11-2026).</p>
+<p>Priority: H = high, M = medium, L = low. Test case IDs refer to the Test Case Document (<code>docs/TEST_CASES.md</code>); all listed tests pass (171 / 171 on 19-11-2026).</p>
 <h3>4.1 Quote Generation &amp; Underwriting</h3>
 <table>
   <tr><th>Req ID</th><th>Requirement</th><th>Pri.</th><th>Acceptance criteria</th><th>Tests</th></tr>
@@ -216,7 +216,7 @@ svg.uml .dep { stroke: #475569; stroke-width: 1.4; }
   <tr><td>IWA-NF-002</td><td>99.9 % availability (excluding scheduled maintenance).</td><td>Reliability</td><td>H</td><td>Health endpoint, container health check, circuit breakers; failing notifications cannot crash the process. Uptime needs production monitoring.</td></tr>
   <tr><td>IWA-NF-003</td><td>Sensitive data encrypted at rest (AES-256) and in transit (TLS 1.2+).</td><td>Security</td><td>H</td><td>TC-Sec-01 (AES-256-GCM), TC-Sec-TLS-01.</td></tr>
   <tr><td>IWA-NF-004</td><td>Audit logs retained 7 years in immutable storage.</td><td>Audit/Compliance</td><td>H</td><td>Append-only triggers and hash chain (TC-Audit-01); retention is an operations policy.</td></tr>
-  <tr><td>IWA-NF-005</td><td>Web UI conforms to WCAG 2.1 AA.</td><td>Usability</td><td>M</td><td>TC-UX-01..04: axe-core finds no A/AA violations on any screen of any role; contrast meets AA in both themes.</td></tr>
+  <tr><td>IWA-NF-005</td><td>Web UI conforms to WCAG 2.1 AA.</td><td>Usability</td><td>M</td><td>TC-UX-01..04, TC-UX-06: axe-core finds no A/AA violations on any screen of any role; contrast meets AA in both themes; no placeholder text.</td></tr>
 </table>
 <h3>5.1 Security</h3>
 <h4>5.1.1 Security Objectives</h4>
@@ -238,7 +238,7 @@ svg.uml .dep { stroke: #475569; stroke-width: 1.4; }
 
 <h2>6. Quality Attributes &amp; Acceptance Tests</h2>
 <ul>
-  <li><b>Exit criteria:</b> all high-priority functional requirements implemented and verified; no critical NFR failures; RTM shows 100 % of high-priority test cases passed. <b>Result (19-11-2026): met.</b> 170 of 170 automated tests pass; 16 defects found during testing, all fixed and re-tested; coverage 96.46 % statements and 85.81 % branches, enforced in CI.</li>
+  <li><b>Exit criteria:</b> all high-priority functional requirements implemented and verified; no critical NFR failures; RTM shows 100 % of high-priority test cases passed. <b>Result (19-11-2026): met.</b> 171 of 171 automated tests pass; 17 defects found during testing, all fixed and re-tested; coverage 96.46 % statements and 85.83 % branches, enforced in CI.</li>
   <li><b>Acceptance test suites:</b> quote generation, underwriting and KYC, policy issuance and management, claims, workflow, performance, security, accessibility (see the Test Case Document).</li>
   <li><b>Open for UAT:</b> production uptime (NF-002), k6 load run on a deployed environment, OWASP ZAP scan, screen-reader walk-through.</li>
 </ul>

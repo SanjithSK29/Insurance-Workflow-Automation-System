@@ -104,6 +104,10 @@ After this report's QA cycle, the Developer Lead tested his own modules and the 
 
 Sprint 4 changes pushed directly to `main` on 18-11 broke the build (CI run #62): the app could not start (DEF-15, High) and claim text was altered before saving (DEF-16, Medium). Both were fixed on branch `samarth-fix-main` together with the Sprint 4 tests themselves. Totals after the fixes: **170 / 170 tests passing**, **16 defects** found and fixed (4 High, 8 Medium, 4 Low), coverage **96.46 % statements, 85.81 % branches, 95.10 % functions, 96.46 % lines**. Details: [Defect Log](DEFECT_LOG.md), [Code Review Log](CODE_REVIEW_LOG.md).
 
+## 9c. Final run (19-11-2026)
+
+Recording the Sprint 2 video exposed DEF-17 (Medium): the adjuster's task screen showed "[object HTMLDivElement]" instead of the fraud indicators. It was fixed with a new screen-wide check (TC-UX-06). Final totals: **171 / 171 tests passing**, **17 defects** found and fixed (4 High, 9 Medium, 4 Low), coverage **96.46 % statements, 85.83 % branches, 95.10 % functions, 96.46 % lines**. The four Part-3 reports each open with a "Final run" section; the updated IEEE-format SRS, SAD and Test Plan are in `docs/ieee/` and the sprint videos in `docs/videos/`.
+
 ## 10. Approvals
 
 | Role | Name | Signature / Date |

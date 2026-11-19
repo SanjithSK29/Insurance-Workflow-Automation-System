@@ -190,6 +190,21 @@ Surya A Bhat pushed 10 commits straight to `main` on 18-11-2026 without a pull r
 - The new RAPID_INCEPTION_HIGH_VALUE fraud rule is kept (SRS F-022 "unusual patterns"); three of Vishal's tests whose scenarios happen to match it were updated, with no change to any expected settlement amount (`507a399`).
 - The Reinstate button confirmed only the INR 500 fee although the customer is charged a new period's premium plus the fee; it now shows the total (`9dc7ec3`).
 
+### DEF-17: the adjuster cannot see fraud indicators; stray "null" on Claims pages (found 19-11-2026)
+
+| Field | Value |
+| --- | --- |
+| Severity | Medium |
+| Module | `public/app.js` (owner: Samarth) |
+| Requirement | IWA-F-022 (adjusters need fraud indicators), SRS §3.1 |
+| Found by | Recording the Sprint 2 outcome video; reproduced by TC-UX-06 |
+| Status | **Fixed and verified** (test `4c1fdce`, fix `1c114f9`) |
+
+**Steps:** sign in as the claims adjuster with a flagged claim in the queue and open My tasks; or open Claims as a customer, adjuster or admin.
+**Expected:** the fraud rules that fired, and no placeholder text. **Actual:** "Fraud indicators: [object HTMLDivElement]", and the word "null" above or below the claims list.
+**Root cause:** the UI's element helper flattened child lists only one level, so a section built as `[heading, flags.map(...)]` inside another list was turned into text; `page()` passed empty (null) sections to `replaceChildren()`, which prints them as "null". The axe-core checks could not see this because the text is valid markup.
+**Fix:** the helper flattens fully and `page()` skips empty sections. TC-UX-06 walks every screen of every role and fails on "null", "undefined" or "[object …]" text.
+
 ## 3. Observations (not defects)
 
 | ID | Observation | Decision |
@@ -211,9 +226,9 @@ Surya A Bhat pushed 10 commits straight to `main` on 18-11-2026 without a pull r
 
 | Metric | Value |
 | --- | --- |
-| Defects found this cycle | 16 (High 4, Medium 8, Low 4): DEF-01..07 by the QA Lead, DEF-08..14 by the Developer Lead, DEF-15..16 in the Sprint 4 changes |
-| Defects fixed and verified | 16 |
+| Defects found this cycle | 17 (High 4, Medium 9, Low 4): DEF-01..07 by the QA Lead, DEF-08..14 by the Developer Lead, DEF-15..16 in the Sprint 4 changes, DEF-17 while recording the Sprint 2 video |
+| Defects fixed and verified | 17 |
 | Open defects | 0 (0 critical) |
 | Defect aging | All fixed on the day they were found (17-11-2026) |
 | Defect density | QA Lead's modules: 3 defects in 489 lines ≈ 6.1 per KLOC. All modules touched by DEF-01..07: 7 defects in 1,295 lines ≈ 5.4 per KLOC. Developer Lead's modules (policies, payments, documents, pdf, web UI): 8 defects (DEF-06, DEF-08..14) in 1,458 lines ≈ 5.5 per KLOC |
-| Regression | Full suite re-run after every fix: 122 / 122 passing at the end of the QA cycle; 154 / 154 at the end of the Developer Lead cycle; 170 / 170 after the Sprint 4 fixes (19-11-2026) |
+| Regression | Full suite re-run after every fix: 122 / 122 passing at the end of the QA cycle; 154 / 154 at the end of the Developer Lead cycle; 170 / 170 after the Sprint 4 fixes; 171 / 171 after DEF-17 (19-11-2026) |
