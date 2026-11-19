@@ -10,6 +10,9 @@
 //   4. node scripts/create-github-project.js --dry-run   (shows what will be created)
 //   5. node scripts/create-github-project.js
 //
+// Safe to run again: it reuses an existing "IWAS Backlog" project and only adds
+// the fields, issues and board items that are still missing.
+//
 // It creates the project "IWAS Backlog" with:
 //   - a Sprint iteration field: Sprint 1-4 on the real sprint dates
 //   - Story points (number) and Owner (single select) fields
@@ -131,38 +134,69 @@ async function main() {
     return;
   }
 
-  const ids = gql(`query($owner:String!,$repo:String!){ user(login:$owner){ id projectsV2(first:50){ nodes { title number url } } } repository(owner:$owner,name:$repo){ id } }`, { owner: OWNER, repo: REPO });
-  const existing = ids.user.projectsV2.nodes.find((p) => p.title === TITLE);
-  if (existing) throw new Error(`A project called "${TITLE}" already exists: ${existing.url}. Delete it or set PROJECT_TITLE.`);
+  const ids = gql(`query($owner:String!,$repo:String!){ user(login:$owner){ id projectsV2(first:100){ nodes { id title number url } } } repository(owner:$owner,name:$repo){ id } }`, { owner: OWNER, repo: REPO });
 
-  const project = gql(`mutation($owner:ID!,$title:String!){ createProjectV2(input:{ownerId:$owner,title:$title}){ projectV2 { id number url } } }`, { owner: ids.user.id, title: TITLE }).createProjectV2.projectV2;
-  console.log(`\nCreated ${project.url}`);
+  // Reuse the project if an earlier run (or a person) already created it, so the
+  // script can be re-run safely and only adds what is missing.
+  let project = ids.user.projectsV2.nodes.find((p) => p.title === TITLE);
+  if (project) {
+    console.log(`\nUsing existing project ${project.url}`);
+  } else {
+    project = gql(`mutation($owner:ID!,$title:String!){ createProjectV2(input:{ownerId:$owner,title:$title}){ projectV2 { id number url } } }`, { owner: ids.user.id, title: TITLE }).createProjectV2.projectV2;
+    console.log(`\nCreated ${project.url}`);
+  }
+
+  // Iterations whose dates have passed are listed under completedIterations, so read both.
+  const FIELDS = `fields(first:50){ nodes {
+      ... on ProjectV2Field { id name dataType }
+      ... on ProjectV2SingleSelectField { id name dataType options { id name } }
+      ... on ProjectV2IterationField { id name dataType configuration { iterations { id title } completedIterations { id title } } } } }`;
+  const fields = gql(`query($p:ID!){ node(id:$p){ ... on ProjectV2 { ${FIELDS} } } }`, { p: project.id }).node.fields.nodes.filter((f) => f && f.name);
+  const field = (name) => fields.find((f) => f.name === name);
+  const iterationOptions = (f) => Object.fromEntries([...f.configuration.iterations, ...f.configuration.completedIterations].map((it) => [it.title, it.id]));
+  const selectOptions = (f) => Object.fromEntries(f.options.map((o) => [o.name, o.id]));
 
   // Sprint field: a real iteration field when the API allows it, otherwise a single select.
   let sprintField;
-  try {
-    const f = gql(`mutation($p:ID!,$cfg:ProjectV2IterationFieldConfigurationInput!){ createProjectV2Field(input:{projectId:$p,dataType:ITERATION,name:"Sprint",iterationConfiguration:$cfg}){
-        projectV2Field { ... on ProjectV2IterationField { id configuration { iterations { id title } } } } } }`,
-    { p: project.id, cfg: { startDate: SPRINTS[0].startDate, duration: 7, iterations: SPRINTS } }).createProjectV2Field.projectV2Field;
-    sprintField = { id: f.id, kind: 'iteration', options: Object.fromEntries(f.configuration.iterations.map((it) => [it.title, it.id])) };
-  } catch (err) {
-    console.log(`  iteration field not available (${err.message}); using a single-select Sprint field`);
-    const f = gql(`mutation($p:ID!,$opts:[ProjectV2SingleSelectFieldOptionInput!]!){ createProjectV2Field(input:{projectId:$p,dataType:SINGLE_SELECT,name:"Sprint",singleSelectOptions:$opts}){
-        projectV2Field { ... on ProjectV2SingleSelectField { id options { id name } } } } }`,
-    { p: project.id, opts: SPRINTS.map((s, n) => ({ name: s.title, color: OWNER_COLORS[n], description: `${s.startDate}, ${s.duration} day(s)` })) }).createProjectV2Field.projectV2Field;
-    sprintField = { id: f.id, kind: 'select', options: Object.fromEntries(f.options.map((o) => [o.name, o.id])) };
+  const existingSprint = field('Sprint');
+  if (existingSprint) {
+    sprintField = existingSprint.dataType === 'ITERATION'
+      ? { id: existingSprint.id, kind: 'iteration', options: iterationOptions(existingSprint) }
+      : { id: existingSprint.id, kind: 'select', options: selectOptions(existingSprint) };
+    console.log(`  using existing Sprint field (${sprintField.kind})`);
+  } else {
+    try {
+      const f = gql(`mutation($p:ID!,$cfg:ProjectV2IterationFieldConfigurationInput!){ createProjectV2Field(input:{projectId:$p,dataType:ITERATION,name:"Sprint",iterationConfiguration:$cfg}){
+          projectV2Field { ... on ProjectV2IterationField { id configuration { iterations { id title } completedIterations { id title } } } } } }`,
+      { p: project.id, cfg: { startDate: SPRINTS[0].startDate, duration: 7, iterations: SPRINTS } }).createProjectV2Field.projectV2Field;
+      sprintField = { id: f.id, kind: 'iteration', options: iterationOptions(f) };
+      console.log('  created Sprint iteration field');
+    } catch (err) {
+      console.log(`  iteration field not available (${err.message}); using a single-select Sprint field`);
+      const f = gql(`mutation($p:ID!,$opts:[ProjectV2SingleSelectFieldOptionInput!]!){ createProjectV2Field(input:{projectId:$p,dataType:SINGLE_SELECT,name:"Sprint",singleSelectOptions:$opts}){
+          projectV2Field { ... on ProjectV2SingleSelectField { id options { id name } } } } }`,
+      { p: project.id, opts: SPRINTS.map((s, n) => ({ name: s.title, color: OWNER_COLORS[n], description: `${s.startDate}, ${s.duration} day(s)` })) }).createProjectV2Field.projectV2Field;
+      sprintField = { id: f.id, kind: 'select', options: selectOptions(f) };
+    }
+  }
+  const missingSprints = SPRINTS.map((s) => s.title).filter((t) => !sprintField.options[t]);
+  if (missingSprints.length) {
+    throw new Error(`The Sprint field has no ${missingSprints.join(', ')} (it has: ${Object.keys(sprintField.options).join(', ') || 'none'}). Rename or add them in the project settings and run again.`);
   }
 
-  const pointsField = gql(`mutation($p:ID!){ createProjectV2Field(input:{projectId:$p,dataType:NUMBER,name:"Story points"}){ projectV2Field { ... on ProjectV2Field { id } } } }`, { p: project.id }).createProjectV2Field.projectV2Field;
-  const ownerField = gql(`mutation($p:ID!,$opts:[ProjectV2SingleSelectFieldOptionInput!]!){ createProjectV2Field(input:{projectId:$p,dataType:SINGLE_SELECT,name:"Owner",singleSelectOptions:$opts}){
-      projectV2Field { ... on ProjectV2SingleSelectField { id options { id name } } } } }`,
-  { p: project.id, opts: owners.map((o, n) => ({ name: o, color: OWNER_COLORS[n % OWNER_COLORS.length], description: items.find((i) => i.owner === o).login || '' })) }).createProjectV2Field.projectV2Field;
-  const ownerOption = Object.fromEntries(ownerField.options.map((o) => [o.name, o.id]));
+  const pointsField = field('Story points')
+    || gql(`mutation($p:ID!){ createProjectV2Field(input:{projectId:$p,dataType:NUMBER,name:"Story points"}){ projectV2Field { ... on ProjectV2Field { id } } } }`, { p: project.id }).createProjectV2Field.projectV2Field;
+  const ownerField = field('Owner')
+    || gql(`mutation($p:ID!,$opts:[ProjectV2SingleSelectFieldOptionInput!]!){ createProjectV2Field(input:{projectId:$p,dataType:SINGLE_SELECT,name:"Owner",singleSelectOptions:$opts}){
+        projectV2Field { ... on ProjectV2SingleSelectField { id options { id name } } } } }`,
+    { p: project.id, opts: owners.map((o, n) => ({ name: o, color: OWNER_COLORS[n % OWNER_COLORS.length], description: items.find((i) => i.owner === o).login || '' })) }).createProjectV2Field.projectV2Field;
+  const ownerOption = selectOptions(ownerField);
+  const missingOwners = owners.filter((o) => !ownerOption[o]);
+  if (missingOwners.length) throw new Error(`The Owner field has no option for ${missingOwners.join(', ')}. Add them in the project settings and run again.`);
 
   // The built-in Status field: every backlog row has been delivered.
-  const fields = gql(`query($p:ID!){ node(id:$p){ ... on ProjectV2 { fields(first:50){ nodes { ... on ProjectV2SingleSelectField { id name options { id name } } } } } } }`, { p: project.id }).node.fields.nodes;
-  const status = fields.find((f) => f && f.name === 'Status');
-  const done = status && status.options.find((o) => o.name === 'Done');
+  const status = field('Status');
+  const done = status && status.options && status.options.find((o) => o.name === 'Done');
 
   const setField = (itemId, fieldId, value) => gql(`mutation($p:ID!,$i:ID!,$f:ID!,$v:ProjectV2FieldValue!){ updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,value:$v}){ projectV2Item { id } } }`,
     { p: project.id, i: itemId, f: fieldId, v: value });
@@ -190,7 +224,11 @@ async function main() {
     console.log(`  ${String(n + 1).padStart(2)}/${items.length} #${it.issue.number} [${it.sprint}] ${it.title}`);
   }
 
-  gql(`mutation($p:ID!,$r:ID!){ linkProjectV2ToRepository(input:{projectId:$p,repositoryId:$r}){ repository { id } } }`, { p: project.id, r: ids.repository.id });
+  try {
+    gql(`mutation($p:ID!,$r:ID!){ linkProjectV2ToRepository(input:{projectId:$p,repositoryId:$r}){ repository { id } } }`, { p: project.id, r: ids.repository.id });
+  } catch (err) {
+    console.log(`  link: ${err.message} (fine if the project is already linked)`);
+  }
   console.log(`\nLinked to ${OWNER}/${REPO}. Open ${project.url} and group the board by "Sprint".`);
 }
 
