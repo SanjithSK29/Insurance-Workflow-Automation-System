@@ -4,7 +4,7 @@
 | --- | --- |
 | Project | Insurance Workflow Automation System (IWAS) |
 | Reviewer | Samarth A (Developer Lead), STP §9 "code review" and docs/WORK_SPLIT.md |
-| Period | Pull requests #6–#13, merged or opened 01-11 to 17-11-2026 |
+| Period | Pull requests #6–#15 and the Sprint 4 commits pushed directly to `main`, 01-11 to 19-11-2026 |
 | Date of review | 17-11-2026 |
 | Method | Read every source change against the SRS/SAD requirement it claims, ran the full suite on the merged result (154 / 154 passing, coverage gate met), and checked how each change interacts with the Developer Lead's modules (policies, payments, documents, web UI) |
 
@@ -22,6 +22,8 @@ Verdicts: **Approved** = no change needed; **Approved with notes** = notes are f
 | #11 | Vishal | Shared `parseNumber()` for DEF-04..07 | Approved; one test adjusted | TC-Endorse-02 now pays for its sum-insured raise (DEF-09) |
 | #12 | Vishal | Sprint plan and delivery record | Approved | Sprint 3 table updated with the Developer Lead's items after merge |
 | #13 | Vishal | Startup warning for persistent DB without fixed keys; Docker context | Approved with notes | Add a unit test for `missingPersistentSecrets()`; consider failing in production |
+| #15 | Sampreeth | Login timing oracle, lockout settings fallback, route-level login limiter | Approved | – |
+| (no PR) | Surya | Sprint 4: reinstatement, cancellation quote, emergency contacts, fraud rule, claims export, XSS | **Changes made** | App crashed on startup (DEF-15); claim text altered (DEF-16); tests never passed; fixed on `samarth-fix-main` |
 
 ## Details
 
@@ -68,6 +70,22 @@ Documentation only (`docs/SPRINTS.md`, `docs/SRS_SAD_CHANGES.md`); figures match
 - **Correct:** `missingPersistentSecrets()` is a small pure function; `.dockerignore` keeps `.env` and `coverage` out of the image.
 - **Note:** `missingPersistentSecrets()` has no test (it is in `server.js`, which the suite does not start). A three-case unit test (`:memory:`, file with all keys, file with none) would pin it.
 - **Note:** the DEF-01 recommendation was to *require* the keys when the database is a file. A warning is friendlier for local demos; for production, failing to start when `NODE_ENV=production` and keys are missing would be safer. Left to Sampreeth (deployment owner).
+
+### PR #15: login hardening follow-ups (Sampreeth)
+
+- **Correct:** unknown and disabled accounts now run scrypt against a dummy hash, so response time no longer reveals which emails are registered; non-numeric or non-positive `LOCKOUT_*` settings fall back to 5 attempts / 15 minutes instead of silently turning lockout off; login gets its own route-level limiter. Each fix has a failing test committed first.
+- **Note (no change):** a locked account still answers before the password check (429). That reveals the account exists, but only after five failed attempts on it, which is acceptable.
+
+### Sprint 4 commits pushed directly to `main` (Surya, 18-11-2026, `2196ab4`..`ee95d5a`)
+
+Reviewed after the fact on 19-11-2026, because the commits did not go through a pull request (OBS-11). CI run #62 on `main` failed.
+
+- **DEF-15 (High):** `admin.js` used `ah()` without importing it, so the app could not start. Fixed in `8af71d8`.
+- **DEF-16 (Medium):** `sanitizeText()` deleted anything that looked like a tag from claim descriptions before saving, altering customers' text ("BP < 140" became "BP  140") and contradicting TC-Sec-Claim-04. The UI and PDFs already render text, never HTML, so it added no protection. Replaced by storing text as written, with a UI-level XSS test (TC-Sec-XSS-02). Fixed in `48eb065`.
+- **Tests:** all 10 Sprint 4 tests read `pol.policyId` from `buyPolicy()`, which returns `{ policy, … }`, so none of them could pass, although the enhancement report listed them as passed. Fixed in `94fc2f0`; the report now carries a review note.
+- **Fraud rule kept:** RAPID_INCEPTION_HIGH_VALUE is a sound "unusual pattern" rule (F-022). Three of Vishal's tests whose scenarios happen to match it were updated without changing any expected amount (`507a399`).
+- **Reinstatement and cancellation quote:** logic is sound (grace period, health declaration, payment lock, invoice, audit). `cancel()` now reuses `cancellationQuote()` so the preview always equals the refund, and the Reinstate button now shows the full charge, premium plus fee, not just the fee (`9dc7ec3`). OBS-12 records a remaining edge case in refunds after a reinstatement.
+- **Emergency contacts and claims export:** correct; parameterised SQL for the export filters; RBAC limits the export to admin and adjuster.
 
 ## Developer Lead's own changes (self-review)
 

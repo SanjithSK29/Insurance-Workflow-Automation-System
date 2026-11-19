@@ -2,8 +2,8 @@
 
 This matrix updates SRS §8 and STP §13 with the implementation and test results.
 Status: **P** = passed, **A** = automated check in CI, **M** = manual / environment-dependent verification.
-Last run (17-11-2026, after the Developer Lead cycle on branch `samarth-dev-hardening`): `npm test` on Node.js 22.19.0 (Windows 11): **154 tests, 154 passed, 0 failed** (122 at the end of the QA cycle). CI re-runs the suite on Node.js 22 for every push and pull request.
-Coverage (`npm run test:coverage`, c8 with `--all`): **96.44 % statements, 85.56 % branches, 94.16 % functions, 96.44 % lines** (QA cycle: 94.68 / 82.18 / 93.53 / 94.68); CI fails below 93 / 80 / 92 / 93. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md). Defects: [Defect Log](reports/DEFECT_LOG.md). Deviations: [DEVIATIONS.md](DEVIATIONS.md).
+Last run (19-11-2026, after the Sprint 4 fixes on branch `samarth-fix-main`): `npm test` on Node.js 22.19.0 (Windows 11): **170 tests, 170 passed, 0 failed** (122 at the end of the QA cycle, 154 after the Developer Lead cycle). CI re-runs the suite on Node.js 22 for every push and pull request.
+Coverage (`npm run test:coverage`, c8 with `--all`): **96.46 % statements, 85.81 % branches, 95.10 % functions, 96.46 % lines** (QA cycle: 94.68 / 82.18 / 93.53 / 94.68); CI fails below 93 / 80 / 92 / 93. Details: [Code Coverage Report](reports/CODE_COVERAGE_REPORT.md), [Branch Coverage Report](reports/BRANCH_COVERAGE_REPORT.md). Defects: [Defect Log](reports/DEFECT_LOG.md). Deviations: [DEVIATIONS.md](DEVIATIONS.md).
 
 ## Functional requirements
 
@@ -44,7 +44,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **96.44 % statements, 85.56
 | IWA-SR-003 | PII masked in logs and UI | `security/pii.js`, `core/logger.js`, audit redaction | TC-Sec-PII-01, TC-Sec-Claim-03 | P |
 | IWA-SR-004 | Rate limiting and throttling | `rateLimit` middleware (stricter on public routes) | TC-Sec-RL-01 | P |
 | IWA-SR-005 | Digitally signed policy and settlement documents | Ed25519 in `documents.js` | TC-Sec-Sign-01, TC-Policy-01, TC-Settle-01, TC-Settle-10 – 12 | P |
-| IWA-SR-006 | Stored XSS sanitization and escaping on user-submitted texts | `core/util.js` (`sanitizeText`), `claims.js` | TC-Sec-XSS-01 | sprint4-security-fraud | P |
+| IWA-SR-006 | User-submitted text can never run as markup | Text stored as written (DEF-16) and rendered as plain text by the web UI (`textContent`) and PDFs; JSON API with `nosniff` and a strict CSP | TC-Sec-XSS-01, TC-Sec-XSS-02, TC-Sec-Claim-04 | sprint4-security-fraud, ui-accessibility, claims-security | P |
 | IWA-F-025 | Adjuster claims register export with status and coverage filtering | `admin.js` (`report`), RBAC extension for adjuster | TC-Report-02 | sprint4-security-fraud | P |
 
 ## Additional automated checks
@@ -77,7 +77,7 @@ Coverage (`npm run test:coverage`, c8 with `--all`): **96.44 % statements, 85.56
 
 | Criterion (STP §5) | Result |
 | --- | --- |
-| 100 % of planned automated test cases executed | 154 / 154 executed, 154 passed |
-| 0 critical defects open | 0 open (14 found this cycle: 3 High, 7 Medium, 4 Low; all fixed and re-tested) |
+| 100 % of planned automated test cases executed | 170 / 170 executed, 170 passed |
+| 0 critical defects open | 0 open (16 found: 4 High, 8 Medium, 4 Low; all fixed and re-tested) |
 | All high-priority acceptance criteria met | All high-priority F- and SR- requirements are P |
 | Items that need a deployed environment | NF-002 uptime, k6 load test, OWASP ZAP scan, NF-005 screen-reader walk-through: planned for UAT (the automated WCAG checks now run in CI) |

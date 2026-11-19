@@ -1,5 +1,7 @@
 # Systems and Hardening Report: Policy Lifecycle, Nominee Contacts, Fraud Velocity & Security
 
+> **Review note (Developer Lead, 19-11-2026).** These changes were pushed to `main` without a pull request, and on 18-11 the tests below did not pass: the app failed to start (DEF-15) and every test here read the wrong policy id. They were fixed on branch `samarth-fix-main`, where all of them now pass. The tag-stripping described under "Stored XSS" was replaced by storing text as written and rendering it as text (DEF-16). Details: [DEFECT_LOG.md](DEFECT_LOG.md) and [CODE_REVIEW_LOG.md](CODE_REVIEW_LOG.md).
+
 | | |
 | --- | --- |
 | Project | Insurance Workflow Automation System (IWAS) v1.0 |
