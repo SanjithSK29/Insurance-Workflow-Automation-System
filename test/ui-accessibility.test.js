@@ -111,6 +111,32 @@ describe('Web UI accessibility (IWA-NF-005)', () => {
     window.close();
   });
 
+  test('TC-Sec-XSS-02: markup in a claim description is shown as text in the UI and never becomes HTML (DEF-16)', async () => {
+    const payload = '<img src=x onerror="window.__xss=1"><script>window.__xss=2</script>Glass < 5000 > 4000';
+    const auth = { authorization: `Bearer ${tokens.CUSTOMER}`, 'content-type': 'application/json' };
+    const policies = await (await fetch(`${origin}/api/v1/policies`, { headers: auth })).json();
+    const active = policies.find((p) => p.status === 'ACTIVE');
+    const filed = await fetch(`${origin}/api/v1/claims`, {
+      method: 'POST', headers: auth,
+      body: JSON.stringify({ policyId: active.policyId, claimType: 'accident', amount: 1200, incidentDate: active.startDate, description: payload }),
+    });
+    assert.equal(filed.status, 201);
+
+    // Staff are the target of a stored-XSS payload: the adjuster's task screen shows the description.
+    const { window, settle } = await openUi('ADJUSTER');
+    window.document.querySelector('#nav [data-view=tasks]').click();
+    await settle();
+    const main = window.document.querySelector('main');
+    assert.ok(main.textContent.includes(payload), 'the description is shown, as text, exactly as written');
+    assert.equal(main.querySelectorAll('img, script').length, 0, 'no element created from the description');
+    assert.equal(window.__xss, undefined, 'no script ran');
+    window.close();
+
+    // The API returns exactly what was written; it is the renderer that keeps it inert.
+    const claims = await (await fetch(`${origin}/api/v1/claims`, { headers: auth })).json();
+    assert.ok(claims.some((c) => c.description === payload));
+  });
+
   test('TC-UX-05: Log out revokes the session token on the server, not just in the browser (DEF-14)', async () => {
     const login = await fetch(`${origin}/api/v1/auth/login`, {
       method: 'POST', headers: { 'content-type': 'application/json' },

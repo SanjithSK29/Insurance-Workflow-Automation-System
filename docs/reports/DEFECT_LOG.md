@@ -162,6 +162,34 @@ Required: 4.5:1 for text, 3:1 for the focus ring (WCAG 1.4.3, 1.4.11). **Fix:** 
 **Expected:** 401 (PR #6 added server-side revocation via `POST /auth/logout`). **Actual:** 200: the UI only deleted its own copy of the token.
 **Fix:** the Log out button calls `POST /auth/logout` before clearing the session.
 
+### DEF-15 and DEF-16: Sprint 4 changes pushed directly to `main` (found 19-11-2026)
+
+Surya A Bhat pushed 10 commits straight to `main` on 18-11-2026 without a pull request. CI run #62 on `main` failed. Found by the Developer Lead while checking the deliverables; fixed on branch `samarth-fix-main`.
+
+| ID | Severity | Module (owner) | Requirement | Summary | Evidence | Fix commit |
+| --- | --- | --- | --- | --- | --- | --- |
+| DEF-15 | **High** | `admin.js` (Sampreeth; changed by Surya) | IWA-NF-002 | The app cannot start: `ah is not defined` | Every API test failed; CI run #62 red | `8af71d8` |
+| DEF-16 | Medium | `claims.js`, `util.js` (Vishal; changed by Surya) | IWA-F-020, SR-003 | Claim descriptions lose any text between `<` and `>` before being saved | TC-Sec-Claim-04 failed | `48eb065` |
+
+#### DEF-15: the server crashes on startup
+
+**Steps:** `npm start` (or any test) on `main` at `ee95d5a`.
+**Expected:** the server starts. **Actual:** `ReferenceError: ah is not defined` from `src/modules/admin.js`, raised while the app is assembled, so no request can be served.
+**Root cause:** commit `27a426f` wrapped the reports route in `ah()` (the async error wrapper) without importing it.
+**Fix:** import `ah` from `core/util`.
+
+#### DEF-16: claim text is silently altered
+
+**Steps:** file a claim with the description `BP < 140, sugar > 200` (or `<script>alert(1)</script>`).
+**Expected:** stored and shown exactly as written, and never run as code. **Actual:** stored as `BP  140, sugar  200` (and `alert(1)`).
+**Root cause:** commit `09ed642` added `sanitizeText()`, which deletes anything that looks like a tag before saving. That contradicts the team's design pinned by TC-Sec-Claim-04: store text as written, escape it on output. It added no protection, because the API returns JSON and the web UI and PDFs render text, never HTML.
+**Fix:** the description is stored as written; `sanitizeText()` is removed. TC-Sec-XSS-01 now checks that nothing is deleted and that the text is served only as JSON; the new TC-Sec-XSS-02 renders the adjuster's task screen with `<img onerror>` and `<script>` payloads and confirms no element is created and no script runs.
+
+**Other Sprint 4 issues fixed in the same branch (test or documentation errors, not product defects):**
+- All 10 Sprint 4 tests read `pol.policyId` from `buyPolicy()`, which returns `{ policy, … }`, so they never passed, although the enhancement report listed them as passed (`94fc2f0`).
+- The new RAPID_INCEPTION_HIGH_VALUE fraud rule is kept (SRS F-022 "unusual patterns"); three of Vishal's tests whose scenarios happen to match it were updated, with no change to any expected settlement amount (`507a399`).
+- The Reinstate button confirmed only the INR 500 fee although the customer is charged a new period's premium plus the fee; it now shows the total (`9dc7ec3`).
+
 ## 3. Observations (not defects)
 
 | ID | Observation | Decision |
@@ -175,15 +203,17 @@ Required: 4.5:1 for text, 3:1 for the focus ring (WCAG 1.4.3, 1.4.11). **Fix:** 
 | OBS-07 | PDF text outside Latin-1 (for example Devanagari names) prints as "?". | Needs an embedded Unicode font; listed in DEVIATIONS.md §7. The web UI shows such names correctly. |
 | OBS-08 | Raising the sum insured by endorsement is not re-underwritten. | Matches SRS F-012 (endorsement with audit trail); large increases could be routed to the underwriter in a later sprint. |
 | OBS-09 | The Payments page lists charges but not refunds. | Refunds appear on the policy's cancellation summary and in the audit log; a refunds list is a small follow-up. |
+| OBS-11 | Sprint 4 commits went straight to `main` without a pull request or review, despite the branch rule that refused other members' direct pushes. | The account appears to have bypass rights; the repository owner should remove them so every change gets one teammate's approval. |
+| OBS-12 | After a reinstatement, an early renewal followed by a cancellation pro-rates the old period from the original purchase payment, not the reinstatement payment (DEF-10 logic only looks at NEW_POLICY and RENEWAL payments). | Only matters if the reinstatement premium differs from the original one; small follow-up for `unusedPremium()`. |
 | OBS-10 | Before this cycle, `GET /payments` returned an empty list for agents. | Improvement, not logged as a defect: agents now see their portfolio's payments, the same rule as policies (TC-Pay-07). |
 
 ## 4. Defect metrics (STP §14)
 
 | Metric | Value |
 | --- | --- |
-| Defects found this cycle | 14 (High 3, Medium 7, Low 4): DEF-01..07 by the QA Lead, DEF-08..14 by the Developer Lead |
-| Defects fixed and verified | 14 |
+| Defects found this cycle | 16 (High 4, Medium 8, Low 4): DEF-01..07 by the QA Lead, DEF-08..14 by the Developer Lead, DEF-15..16 in the Sprint 4 changes |
+| Defects fixed and verified | 16 |
 | Open defects | 0 (0 critical) |
 | Defect aging | All fixed on the day they were found (17-11-2026) |
 | Defect density | QA Lead's modules: 3 defects in 489 lines ≈ 6.1 per KLOC. All modules touched by DEF-01..07: 7 defects in 1,295 lines ≈ 5.4 per KLOC. Developer Lead's modules (policies, payments, documents, pdf, web UI): 8 defects (DEF-06, DEF-08..14) in 1,458 lines ≈ 5.5 per KLOC |
-| Regression | Full suite re-run after every fix: 122 / 122 passing at the end of the QA cycle; 154 / 154 at the end of the Developer Lead cycle |
+| Regression | Full suite re-run after every fix: 122 / 122 passing at the end of the QA cycle; 154 / 154 at the end of the Developer Lead cycle; 170 / 170 after the Sprint 4 fixes (19-11-2026) |

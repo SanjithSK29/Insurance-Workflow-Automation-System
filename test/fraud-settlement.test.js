@@ -121,7 +121,8 @@ describe('Fraud detection rules (IWA-F-022)', () => {
     assert.equal(atThreshold.score, 50);
     assert.equal(atThreshold.flagged, true);
 
-    // Every rule at once: 60 + 30 + 25 + 25 + 15 + 10 = 165, capped at 100.
+    // Every rule at once: 60 + 30 + 25 + 35 + 25 + 15 + 10 = 200, capped at 100.
+    // (RAPID_INCEPTION_HIGH_VALUE, +35, was added in Sprint 4 by Surya.)
     const incident = addDays(start, 10);
     const all = detectFraud({
       claim: { claimType: 'hospitalization', amount: 600000, incidentDate: incident },
@@ -131,7 +132,7 @@ describe('Fraud detection rules (IWA-F-022)', () => {
       reportedOn: addDays(incident, 45),
       remainingCover: 500000,
     });
-    assert.deepEqual(codes(all), ['DUPLICATE_CLAIM', 'EARLY_CLAIM', 'EXCEEDS_REMAINING_COVER', 'FREQUENT_CLAIMS', 'LATE_REPORTING', 'NO_SUPPORTING_DOCUMENTS']);
+    assert.deepEqual(codes(all), ['DUPLICATE_CLAIM', 'EARLY_CLAIM', 'EXCEEDS_REMAINING_COVER', 'FREQUENT_CLAIMS', 'LATE_REPORTING', 'NO_SUPPORTING_DOCUMENTS', 'RAPID_INCEPTION_HIGH_VALUE']);
     assert.equal(all.score, 100);
     assert.equal(all.flagged, true);
   });

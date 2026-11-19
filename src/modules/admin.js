@@ -1,7 +1,7 @@
 // Operations: dashboards (IWA-F-032), CSV/PDF reports (IWA-F-033), audit log
 // access (IWA-F-034), runtime settings and scheduled jobs.
 const express = require('express');
-const { today, round2, isIsoDate, parseJson, daysBetween, parseNumber } = require('../core/util');
+const { ah, today, round2, isIsoDate, parseJson, daysBetween, parseNumber } = require('../core/util');
 const { requireRole } = require('../security/middleware');
 const { buildPdf } = require('./pdf');
 const { badRequest, notFound } = require('../core/errors');

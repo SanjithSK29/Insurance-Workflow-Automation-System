@@ -100,6 +100,10 @@ Steps to reproduce, root causes and fix commits: [DEFECT_LOG.md](DEFECT_LOG.md).
 
 After this report's QA cycle, the Developer Lead tested his own modules and the web UI the same way (failing test first, then fix). Totals at the end of the day: **154 / 154 tests passing**, **14 defects** found and fixed (3 High, 7 Medium, 4 Low; DEF-08..14 are the Developer Lead's), coverage **96.44 % statements / 85.56 % branches / 94.16 % functions**. The WCAG 2.1 AA check (NF-005), listed above as needing UAT, is now automated with axe-core and a contrast check; a screen-reader walk-through remains for UAT. Details: [Developer Lead Report](DEV_LEAD_REPORT.md), [Defect Log](DEFECT_LOG.md).
 
+## 9b. Addendum: Sprint 4 fixes (19-11-2026)
+
+Sprint 4 changes pushed directly to `main` on 18-11 broke the build (CI run #62): the app could not start (DEF-15, High) and claim text was altered before saving (DEF-16, Medium). Both were fixed on branch `samarth-fix-main` together with the Sprint 4 tests themselves. Totals after the fixes: **170 / 170 tests passing**, **16 defects** found and fixed (4 High, 8 Medium, 4 Low), coverage **96.46 % statements, 85.81 % branches, 95.10 % functions, 96.46 % lines**. Details: [Defect Log](DEFECT_LOG.md), [Code Review Log](CODE_REVIEW_LOG.md).
+
 ## 10. Approvals
 
 | Role | Name | Signature / Date |

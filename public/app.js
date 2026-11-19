@@ -351,7 +351,9 @@
     h('div', { class: 'row' }, field('Nominee', 'nominee', { value: p.nominee }), field('Address', 'address', { value: p.address }), field('Sum insured (₹)', 'sumInsured', { type: 'number', placeholder: String(p.sumInsured) })),
     h('button', { type: 'submit' }, 'Submit endorsement'));
     const reinstate = h('div', { class: 'actions' }, h('button', { class: 'ghost', onclick: act(async () => {
-      if (!confirm('Reinstate this policy? Admin fee INR 500 applies, and you confirm no claims occurred during lapse.')) return;
+      // Show the full charge: a new period's premium plus the INR 500 reinstatement fee.
+      const rq = await api('GET', `/policies/${id}/renewal-quote`);
+      if (!confirm(`Reinstate until ${rq.newEndDate} for ${inr(rq.premium + 500)} (premium ${inr(rq.premium)} + fee ${inr(500)}, sandbox card)? You confirm no claims or new medical conditions arose while the policy was lapsed.`)) return;
       await api('POST', `/policies/${id}/reinstate`, { paymentToken: 'tok_success', healthDeclaration: true });
       toast('Policy reinstated successfully'); policiesView(id);
     }) }, 'Reinstate policy'));

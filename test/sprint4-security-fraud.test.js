@@ -2,7 +2,7 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { startApp, pdfDoc } = require('./helpers');
 const { detectFraud } = require('../src/modules/fraud');
-const { sanitizeText, addDays, today } = require('../src/core/util');
+const { addDays, today } = require('../src/core/util');
 
 describe('Sprint 4 Security, Fraud Detection & Claims Export', () => {
   let env;
@@ -69,7 +69,7 @@ describe('Sprint 4 Security, Fraud Detection & Claims Export', () => {
 
   it('TC-Report-02: Adjuster can export claims register CSV with filtering; Customer is forbidden', async () => {
     const cust = await env.newCustomer('report-01');
-    const pol = await env.buyPolicy(cust, { coverageType: 'health', sumInsured: 500_000, term: 1 });
+    const { policy: pol } = await env.buyPolicy(cust, { coverageType: 'health', sumInsured: 500_000, term: 1 });
 
     // File a claim
     await env.call('POST', '/claims', {
@@ -97,30 +97,25 @@ describe('Sprint 4 Security, Fraud Detection & Claims Export', () => {
     assert.ok(csvContent.includes('hospitalization'));
   });
 
-  it('TC-Sec-XSS-01: Script and HTML tags in claim descriptions are sanitized', async () => {
-    const maliciousInput = '<script>alert("xss")</script>Patient hospitalized at <b>Apex Care</b>';
-    const cleanText = sanitizeText(maliciousInput);
-    assert.equal(cleanText, 'alert("xss")Patient hospitalized at Apex Care');
-
+  it('TC-Sec-XSS-01: claim text is stored exactly as written and returned only as JSON data (DEF-16)', async () => {
     const cust = await env.newCustomer('xss-01');
-    const pol = await env.buyPolicy(cust, { coverageType: 'motor', sumInsured: 200_000, term: 1 });
+    const { policy: pol } = await env.buyPolicy(cust, { coverageType: 'motor', sumInsured: 200_000, term: 1 });
+    const description = '<img src=x onerror=alert(1)>Bumper replaced; bill < 15000, estimate > 12000';
 
     const res = await env.call('POST', '/claims', {
       token: cust.token,
-      body: {
-        policyId: pol.policyId,
-        claimType: 'accident',
-        amount: 15_000,
-        incidentDate: today(),
-        description: '<img src=x onerror=alert(1)>Bumper replaced',
-        documents: [pdfDoc()],
-      },
+      body: { policyId: pol.policyId, claimType: 'accident', amount: 15_000, incidentDate: today(), description, documents: [pdfDoc()] },
     });
-
     assert.equal(res.status, 201);
-    const claimRow = env.ctx.db.get('SELECT description FROM claims WHERE id = ?', res.body.id);
-    assert.ok(!claimRow.description.includes('<img'));
-    assert.ok(!claimRow.description.includes('<'));
-    assert.ok(claimRow.description.includes('Bumper replaced'));
+
+    // Nothing is silently deleted from what the customer wrote.
+    const claimRow = env.ctx.db.get('SELECT description FROM claims WHERE id = ?', res.body.claimId);
+    assert.equal(claimRow.description, description);
+
+    // It is served as JSON data, never as HTML; the web UI renders it as text (TC-Sec-XSS-02).
+    const view = await env.call('GET', `/claims/${res.body.claimId}`, { token: cust.token });
+    assert.match(view.headers.get('content-type'), /^application\/json/);
+    assert.equal(view.body.description, description);
+    assert.equal(view.headers.get('x-content-type-options'), 'nosniff');
   });
 });
